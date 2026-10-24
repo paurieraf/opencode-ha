@@ -11,6 +11,7 @@ Use models from your [OpenCode Go](https://opencode.ai/go) subscription as Home 
 - **Multiple agents and model discovery** — one agent per model under a single API key; the flows list your subscription's models, with a manual override for anything missing.
 - **Every OpenCode Go API family** — Chat Completions, Anthropic Messages, and OpenAI Responses.
 - **Streaming responses** — voice replies start speaking before generation finishes.
+- **Localized** — English, Catalan and Spanish; conversation errors are spoken in the language of the conversation, not the system language.
 - **Environment awareness** — each request tells the model it runs in Home Assistant, without overriding your instructions.
 
 ## Setup
@@ -41,7 +42,7 @@ Open the integration and choose **Add conversation agent**. Each agent has its o
 
 | Option | Description |
 |---|---|
-| **Model** | Pick one available to your subscription, or enter a **Custom model ID** for one not listed (set **API family** manually). |
+| **Model** | Pick one available to your subscription, or enter a **Custom model ID** for one not listed (set **API family** manually). A custom ID always wins; clear it to go back to the model in the list. |
 | **API family** | Wire protocol: Automatic, Chat Completions, Messages, or Responses. Only needed for custom IDs. |
 | **Control Home Assistant** | Off by default. Enables Assist intents. Text the model reads, such as entity names and states, can influence those actions. |
 | **Instructions** | Optional extra system prompt for this agent. |

@@ -4,7 +4,10 @@ from typing import Literal, override
 
 from homeassistant.components import conversation
 from homeassistant.const import CONF_LLM_HASS_API, CONF_PROMPT, MATCH_ALL
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import intent
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.translation import async_get_translations
 
 from . import OpenCodeConfigEntry
 from .const import DOMAIN
@@ -86,6 +89,39 @@ class OpenCodeConversationEntity(
         except conversation.ConverseError as err:
             return err.as_conversation_result()
 
-        await self._async_handle_chat_log(chat_log)
+        try:
+            await self._async_handle_chat_log(chat_log)
+        except HomeAssistantError as err:
+            return await self._async_error_result(user_input, chat_log, err)
 
         return conversation.async_get_result_from_chat_log(user_input, chat_log)
+
+    async def _async_error_result(
+        self,
+        user_input: conversation.ConversationInput,
+        chat_log: conversation.ChatLog,
+        err: HomeAssistantError,
+    ) -> conversation.ConversationResult:
+        """Return an error spoken in the conversation language.
+
+        Home Assistant renders exception messages in the system language, which
+        can differ from the language of the voice pipeline.
+        """
+        message = str(err)
+        if err.translation_domain == DOMAIN and err.translation_key:
+            translations = await async_get_translations(
+                self.hass, user_input.language, "exceptions", [DOMAIN]
+            )
+            template = translations.get(
+                f"component.{DOMAIN}.exceptions.{err.translation_key}.message"
+            )
+            if template:
+                message = template.format(**(err.translation_placeholders or {}))
+
+        response = intent.IntentResponse(language=user_input.language)
+        response.async_set_error(intent.IntentResponseErrorCode.UNKNOWN, message)
+        return conversation.ConversationResult(
+            response=response,
+            conversation_id=chat_log.conversation_id,
+            continue_conversation=False,
+        )

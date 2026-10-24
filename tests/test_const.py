@@ -47,3 +47,22 @@ def test_family_for_fallbacks():
     assert family_for("unknown-model") == FAMILY_CHAT
     assert family_for("unknown-model", FAMILY_AUTO) == FAMILY_CHAT
     assert family_for("unknown-model", FAMILY_MESSAGES) == FAMILY_MESSAGES
+
+
+def test_translations_match_strings():
+    """Every translation file has exactly the keys of strings.json."""
+    import json
+    from pathlib import Path
+
+    base = Path(__file__).parent.parent / "custom_components" / "opencode_conversation"
+
+    def keys(node, prefix=""):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                yield from keys(value, f"{prefix}{key}.")
+        else:
+            yield prefix.rstrip(".")
+
+    expected = set(keys(json.loads((base / "strings.json").read_text())))
+    for path in sorted((base / "translations").glob("*.json")):
+        assert set(keys(json.loads(path.read_text()))) == expected, path.name

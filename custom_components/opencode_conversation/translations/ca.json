@@ -1,0 +1,145 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connecta amb OpenCode",
+        "description": "Introdueix una clau d'API d'OpenCode Go. Pots crear i gestionar claus a l'OpenCode Console un cop subscrit a Go.",
+        "data": {
+          "api_key": "Clau d'API"
+        },
+        "data_description": {
+          "api_key": "Es desa a la configuració de Home Assistant i només s'envia a opencode.ai."
+        }
+      },
+      "model": {
+        "title": "Tria un model",
+        "description": "Tria el model del primer assistent d'OpenCode. Més endavant pots afegir més assistents amb altres models.",
+        "data": {
+          "model": "Model"
+        },
+        "data_description": {
+          "model": "Només es mostren els models disponibles a la teva subscripció amb una família d'API verificada. La nota després del nom indica com tracta OpenCode les teves peticions."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Torna a autenticar OpenCode",
+        "description": "OpenCode ha rebutjat la clau d'API. Introdueix una clau vàlida del mateix compte.",
+        "data": {
+          "api_key": "Clau d'API"
+        }
+      },
+      "reconfigure": {
+        "title": "Actualitza la clau d'API d'OpenCode",
+        "description": "Introdueix una clau d'API nova per a aquest compte d'OpenCode.",
+        "data": {
+          "api_key": "Clau d'API"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Clau d'API no vàlida",
+      "cannot_connect": "No s'ha pogut connectar amb OpenCode",
+      "usage_limit": "S'ha arribat al límit d'ús d'OpenCode. Torna-ho a provar més tard."
+    },
+    "abort": {
+      "already_configured": "Aquesta clau d'API ja està configurada",
+      "reauth_successful": "S'ha tornat a autenticar correctament"
+    }
+  },
+  "config_subentries": {
+    "conversation": {
+      "entry_type": "Agent de conversa",
+      "initiate_flow": {
+        "user": "Afegeix un agent de conversa",
+        "reconfigure": "Reconfigura l'agent de conversa"
+      },
+      "step": {
+        "init": {
+          "title": "Agent de conversa",
+          "description": "Configura aquest agent de conversa d'OpenCode.",
+          "data": {
+            "name": "Nom",
+            "model": "Model",
+            "custom_model": "ID de model personalitzat",
+            "api_family": "Família d'API",
+            "llm_hass_api": "Controla Home Assistant",
+            "prompt": "Instruccions",
+            "max_tokens": "Màxim de tokens per resposta",
+            "thinking": "Raonament (thinking)"
+          },
+          "data_description": {
+            "name": "Un nom per a aquest agent, per exemple l'habitació o la funció que fa.",
+            "model": "Models certificats disponibles a la teva subscripció. La nota després del nom indica com tracta OpenCode les teves peticions. S'ignora si hi ha un ID de model personalitzat.",
+            "custom_model": "Opcional. Substitueix el model de la llista per un ID que no hi surt, per exemple un model nou. Buida-ho per tornar a fer servir el model triat a la llista.",
+            "api_family": "Quina API parla el model. Deixa-ho en Automàtic si no fas servir un model personalitzat.",
+            "llm_hass_api": "Desactivat per defecte. Tria Assist perquè el model pugui controlar la casa. Qualsevol text que llegeixi el model, com els noms i estats de les entitats, pot influir en aquestes accions. Deixa-ho buit per a un agent només de xat.",
+            "prompt": "Instruccions addicionals opcionals que s'afegeixen a cada petició.",
+            "max_tokens": "Límit de tokens que el model pot generar per resposta.",
+            "thinking": "Només per a models de Chat Completions. Desactivat apaga el raonament dels models que raonen per defecte, com DeepSeek, i les respostes són més ràpides. Deixa-ho en el valor per defecte del model si el model no accepta el camp thinking."
+          }
+        }
+      },
+      "abort": {
+        "entry_not_loaded": "La integració d'OpenCode no està carregada. Inicia-la abans d'afegir agents."
+      }
+    },
+    "ai_task_data": {
+      "entry_type": "Tasca d'IA",
+      "initiate_flow": {
+        "user": "Afegeix una tasca d'IA",
+        "reconfigure": "Reconfigura la tasca d'IA"
+      },
+      "step": {
+        "init": {
+          "title": "Tasca d'IA",
+          "description": "Configura aquesta entitat de tasca d'IA d'OpenCode.",
+          "data": {
+            "name": "Nom",
+            "model": "Model",
+            "custom_model": "ID de model personalitzat",
+            "api_family": "Família d'API",
+            "max_tokens": "Màxim de tokens per resposta",
+            "thinking": "Raonament (thinking)"
+          },
+          "data_description": {
+            "name": "Un nom per a aquesta entitat de tasca d'IA.",
+            "model": "Models certificats disponibles a la teva subscripció. La nota després del nom indica com tracta OpenCode les teves peticions. S'ignora si hi ha un ID de model personalitzat.",
+            "custom_model": "Opcional. Substitueix el model de la llista per un ID que no hi surt. Buida-ho per tornar a fer servir el model triat a la llista.",
+            "api_family": "Quina API parla el model. Deixa-ho en Automàtic si no fas servir un model personalitzat.",
+            "max_tokens": "Límit de tokens que el model pot generar per tasca.",
+            "thinking": "Només per a models de Chat Completions. Desactivat apaga el raonament dels models que raonen per defecte, com DeepSeek, i les respostes són més ràpides. Deixa-ho en el valor per defecte del model si el model no accepta el camp thinking."
+          }
+        }
+      },
+      "abort": {
+        "entry_not_loaded": "La integració d'OpenCode no està carregada. Inicia-la abans d'afegir tasques d'IA."
+      }
+    }
+  },
+  "exceptions": {
+    "api_error": {
+      "message": "Error en parlar amb OpenCode: {error}"
+    },
+    "authentication_error": {
+      "message": "OpenCode ha rebutjat la clau d'API. Torna a autenticar la integració."
+    },
+    "empty_response": {
+      "message": "OpenCode no ha retornat cap resposta."
+    },
+    "invalid_structured_response": {
+      "message": "OpenCode ha retornat una resposta estructurada no vàlida."
+    },
+    "model_unavailable": {
+      "message": "El model {model} ja no està disponible a OpenCode Go."
+    },
+    "protocol_unsupported": {
+      "message": "El model {model} no admet la família d'API configurada. Revisa les opcions de l'agent."
+    },
+    "rate_limit": {
+      "message": "S'ha arribat al límit d'ús d'OpenCode per a {model}. Torna-ho a provar més tard."
+    },
+    "rate_limit_retry": {
+      "message": "S'ha arribat al límit d'ús d'OpenCode per a {model}. Torna-ho a provar d'aquí a {seconds} segons."
+    }
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Conectar con OpenCode",
+        "description": "Introduce una clave de API de OpenCode Go. Puedes crear y gestionar claves en OpenCode Console tras suscribirte a Go.",
+        "data": {
+          "api_key": "Clave de API"
+        },
+        "data_description": {
+          "api_key": "Se guarda en la configuración de Home Assistant y solo se envía a opencode.ai."
+        }
+      },
+      "model": {
+        "title": "Elige un modelo",
+        "description": "Elige el modelo del primer asistente de OpenCode. Más adelante puedes añadir más asistentes con otros modelos.",
+        "data": {
+          "model": "Modelo"
+        },
+        "data_description": {
+          "model": "Solo se muestran los modelos disponibles en tu suscripción con una familia de API verificada. La nota tras el nombre indica cómo trata OpenCode tus peticiones."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Volver a autenticar OpenCode",
+        "description": "OpenCode ha rechazado la clave de API. Introduce una clave válida de la misma cuenta.",
+        "data": {
+          "api_key": "Clave de API"
+        }
+      },
+      "reconfigure": {
+        "title": "Actualizar la clave de API de OpenCode",
+        "description": "Introduce una clave de API nueva para esta cuenta de OpenCode.",
+        "data": {
+          "api_key": "Clave de API"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Clave de API no válida",
+      "cannot_connect": "No se ha podido conectar con OpenCode",
+      "usage_limit": "Se ha alcanzado el límite de uso de OpenCode. Vuelve a intentarlo más tarde."
+    },
+    "abort": {
+      "already_configured": "Esta clave de API ya está configurada",
+      "reauth_successful": "Se ha vuelto a autenticar correctamente"
+    }
+  },
+  "config_subentries": {
+    "conversation": {
+      "entry_type": "Agente de conversación",
+      "initiate_flow": {
+        "user": "Añadir agente de conversación",
+        "reconfigure": "Reconfigurar agente de conversación"
+      },
+      "step": {
+        "init": {
+          "title": "Agente de conversación",
+          "description": "Configura este agente de conversación de OpenCode.",
+          "data": {
+            "name": "Nombre",
+            "model": "Modelo",
+            "custom_model": "ID de modelo personalizado",
+            "api_family": "Familia de API",
+            "llm_hass_api": "Controlar Home Assistant",
+            "prompt": "Instrucciones",
+            "max_tokens": "Máximo de tokens por respuesta",
+            "thinking": "Razonamiento (thinking)"
+          },
+          "data_description": {
+            "name": "Un nombre para este agente, por ejemplo la habitación o la función que cumple.",
+            "model": "Modelos certificados disponibles en tu suscripción. La nota tras el nombre indica cómo trata OpenCode tus peticiones. Se ignora si hay un ID de modelo personalizado.",
+            "custom_model": "Opcional. Sustituye el modelo de la lista por un ID que no aparece en ella, por ejemplo un modelo nuevo. Vacíalo para volver a usar el modelo elegido en la lista.",
+            "api_family": "Qué API habla el modelo. Déjalo en Automático salvo que uses un modelo personalizado.",
+            "llm_hass_api": "Desactivado por defecto. Elige Assist para que el modelo pueda controlar la casa. Cualquier texto que lea el modelo, como los nombres y estados de las entidades, puede influir en esas acciones. Déjalo vacío para un agente solo de chat.",
+            "prompt": "Instrucciones adicionales opcionales que se añaden a cada petición.",
+            "max_tokens": "Límite de tokens que el modelo puede generar por respuesta.",
+            "thinking": "Solo para modelos de Chat Completions. Desactivado apaga el razonamiento de los modelos que razonan por defecto, como DeepSeek, y las respuestas son más rápidas. Déjalo en el valor por defecto del modelo si el modelo no acepta el campo thinking."
+          }
+        }
+      },
+      "abort": {
+        "entry_not_loaded": "La integración de OpenCode no está cargada. Iníciala antes de añadir agentes."
+      }
+    },
+    "ai_task_data": {
+      "entry_type": "Tarea de IA",
+      "initiate_flow": {
+        "user": "Añadir tarea de IA",
+        "reconfigure": "Reconfigurar tarea de IA"
+      },
+      "step": {
+        "init": {
+          "title": "Tarea de IA",
+          "description": "Configura esta entidad de tarea de IA de OpenCode.",
+          "data": {
+            "name": "Nombre",
+            "model": "Modelo",
+            "custom_model": "ID de modelo personalizado",
+            "api_family": "Familia de API",
+            "max_tokens": "Máximo de tokens por respuesta",
+            "thinking": "Razonamiento (thinking)"
+          },
+          "data_description": {
+            "name": "Un nombre para esta entidad de tarea de IA.",
+            "model": "Modelos certificados disponibles en tu suscripción. La nota tras el nombre indica cómo trata OpenCode tus peticiones. Se ignora si hay un ID de modelo personalizado.",
+            "custom_model": "Opcional. Sustituye el modelo de la lista por un ID que no aparece en ella. Vacíalo para volver a usar el modelo elegido en la lista.",
+            "api_family": "Qué API habla el modelo. Déjalo en Automático salvo que uses un modelo personalizado.",
+            "max_tokens": "Límite de tokens que el modelo puede generar por tarea.",
+            "thinking": "Solo para modelos de Chat Completions. Desactivado apaga el razonamiento de los modelos que razonan por defecto, como DeepSeek, y las respuestas son más rápidas. Déjalo en el valor por defecto del modelo si el modelo no acepta el campo thinking."
+          }
+        }
+      },
+      "abort": {
+        "entry_not_loaded": "La integración de OpenCode no está cargada. Iníciala antes de añadir tareas de IA."
+      }
+    }
+  },
+  "exceptions": {
+    "api_error": {
+      "message": "Error al comunicarse con OpenCode: {error}"
+    },
+    "authentication_error": {
+      "message": "OpenCode ha rechazado la clave de API. Vuelve a autenticar la integración."
+    },
+    "empty_response": {
+      "message": "OpenCode no ha devuelto ninguna respuesta."
+    },
+    "invalid_structured_response": {
+      "message": "OpenCode ha devuelto una respuesta estructurada no válida."
+    },
+    "model_unavailable": {
+      "message": "El modelo {model} ya no está disponible en OpenCode Go."
+    },
+    "protocol_unsupported": {
+      "message": "El modelo {model} no admite la familia de API configurada. Revisa las opciones del agente."
+    },
+    "rate_limit": {
+      "message": "Se ha alcanzado el límite de uso de OpenCode para {model}. Vuelve a intentarlo más tarde."
+    },
+    "rate_limit_retry": {
+      "message": "Se ha alcanzado el límite de uso de OpenCode para {model}. Vuelve a intentarlo dentro de {seconds} segundos."
+    }
+  }
+}

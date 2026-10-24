@@ -192,6 +192,53 @@ async def test_reconfigure_conversation_subentry(hass, aioclient_mock):
     assert updated.data["max_tokens"] == 256
 
 
+def _schema_default(result, key: str):
+    """Return the default of a field in a form result."""
+    marker = next(m for m in result["data_schema"].schema if str(m) == key)
+    return marker.default()
+
+
+async def test_reconfigure_with_custom_model_prefills_custom_field(hass, aioclient_mock):
+    """A custom model is shown in its own field; clearing it restores a listed model."""
+    entry = await create_entry(hass, aioclient_mock)
+    subentry = next(
+        subentry
+        for subentry in entry.subentries.values()
+        if subentry.subentry_type == "conversation"
+    )
+    hass.config_entries.async_update_subentry(
+        entry, subentry, data={**subentry.data, "model": "model-inexistent-prova"}
+    )
+    await hass.async_block_till_done()
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "conversation"),
+        context={
+            "source": config_entries.SOURCE_RECONFIGURE,
+            "subentry_id": subentry.subentry_id,
+        },
+    )
+    assert _schema_default(result, "custom_model") == "model-inexistent-prova"
+    assert _schema_default(result, "model") == "deepseek-v4.1-flash"
+
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        {
+            "model": "deepseek-v4.1-flash",
+            "custom_model": "",
+            "api_family": "auto",
+            "llm_hass_api": [],
+            "prompt": "",
+            "max_tokens": 1024,
+        },
+    )
+    assert result["type"] is FlowResultType.ABORT
+    await hass.async_block_till_done()
+
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert entry.subentries[subentry.subentry_id].data["model"] == "deepseek-v4.1-flash"
+
+
 async def test_reauth_flow(hass, aioclient_mock):
     """Reauthentication updates the API key without a new entry."""
     entry = await create_entry(hass, aioclient_mock)

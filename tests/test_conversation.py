@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from homeassistant.components import conversation
 from homeassistant.core import Context
+from homeassistant.helpers import intent
 
 from custom_components.opencode_conversation.api import (
     OpenCodeAuthError,
@@ -419,6 +420,46 @@ async def test_model_unavailable_translated(hass, aioclient_mock):
 
     assert error.translation_key == "model_unavailable"
     assert error.translation_placeholders == {"model": "deepseek-v4.1-flash"}
+
+
+async def _converse_in(hass, text: str, language: str) -> conversation.ConversationResult:
+    """Send a request to the OpenCode agent in a given language."""
+    return await conversation.async_converse(
+        hass, text, None, Context(), language, agent_id="conversation.opencode_assistant"
+    )
+
+
+async def test_error_spoken_in_conversation_language(hass, aioclient_mock):
+    """API errors are rendered in the language of the conversation."""
+    entry = await create_entry(hass, aioclient_mock, llm_hass_api=[])
+    entry.runtime_data = FakeClient(error=OpenCodeModelUnavailable("gone"))
+
+    result = await _converse_in(hass, "Hola", "ca")
+    assert result.response.response_type is intent.IntentResponseType.ERROR
+    assert result.response.speech["plain"]["speech"] == (
+        "El model deepseek-v4.1-flash ja no està disponible a OpenCode Go."
+    )
+
+    result = await _converse_in(hass, "Hola", "es")
+    assert result.response.speech["plain"]["speech"] == (
+        "El modelo deepseek-v4.1-flash ya no está disponible en OpenCode Go."
+    )
+
+    result = await _converse_in(hass, "Hello", "en")
+    assert result.response.speech["plain"]["speech"] == (
+        "Model deepseek-v4.1-flash is no longer available on OpenCode Go."
+    )
+
+
+async def test_error_falls_back_without_translation(hass, aioclient_mock):
+    """A language without translations still gets a readable error."""
+    entry = await create_entry(hass, aioclient_mock, llm_hass_api=[])
+    entry.runtime_data = FakeClient(error=OpenCodeModelUnavailable("gone"))
+
+    result = await _converse_in(hass, "Bonjour", "fr")
+
+    assert result.response.response_type is intent.IntentResponseType.ERROR
+    assert "deepseek-v4.1-flash" in result.response.speech["plain"]["speech"]
 
 
 async def test_rate_limit_translated(hass, aioclient_mock):

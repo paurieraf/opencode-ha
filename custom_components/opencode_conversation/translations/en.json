@@ -69,8 +69,8 @@
           },
           "data_description": {
             "name": "A name for this agent, for example the room or purpose it serves.",
-            "model": "Certified models available to your subscription. A note after a model name describes how OpenCode handles your prompts.",
-            "custom_model": "Optional. Use a model ID that is not in the list above, for example a newly released model.",
+            "model": "Certified models available to your subscription. A note after a model name describes how OpenCode handles your prompts. Ignored when a custom model ID is set.",
+            "custom_model": "Optional. Replaces the model above with an ID that is not in the list, for example a newly released model. Clear it to use the model selected in the list again.",
             "api_family": "Which API the model speaks. Leave on Automatic unless you use a custom model.",
             "llm_hass_api": "Off by default. Select Assist to let the model control your home. Any text the model reads, such as entity names and states, can influence those actions. Leave empty for a chat-only agent.",
             "prompt": "Optional extra instructions added to every request.",
@@ -103,8 +103,8 @@
           },
           "data_description": {
             "name": "A name for this AI task entity.",
-            "model": "Certified models available to your subscription. A note after a model name describes how OpenCode handles your prompts.",
-            "custom_model": "Optional. Use a model ID that is not in the list above.",
+            "model": "Certified models available to your subscription. A note after a model name describes how OpenCode handles your prompts. Ignored when a custom model ID is set.",
+            "custom_model": "Optional. Replaces the model above with an ID that is not in the list. Clear it to use the model selected in the list again.",
             "api_family": "Which API the model speaks. Leave on Automatic unless you use a custom model.",
             "max_tokens": "Upper limit for tokens the model may generate per task.",
             "thinking": "Chat Completions models only. Disabled turns off reasoning on models that think by default, such as DeepSeek, for faster replies. Leave on Model default for models that do not accept the thinking field."

@@ -382,6 +382,13 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
             )
 
         models = await self._async_available_models(entry)
+        current_model = options.get(CONF_MODEL, DEFAULT_MODEL)
+        # A custom model is shown in its own field, so clearing that field and
+        # saving falls back to a model from the list instead of keeping it.
+        if current_model in models:
+            model_default, custom_default = current_model, ""
+        else:
+            model_default, custom_default = DEFAULT_MODEL, current_model
 
         step_schema: VolDictType = {}
         if self._is_new:
@@ -389,10 +396,10 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
                 TextSelector()
             )
         step_schema[
-            probatio.Required(CONF_MODEL, default=options.get(CONF_MODEL, DEFAULT_MODEL))
+            probatio.Required(CONF_MODEL, default=model_default)
         ] = SelectSelector(SelectSelectorConfig(options=_model_options(models)))
         step_schema[
-            probatio.Optional(CONF_CUSTOM_MODEL, default="")
+            probatio.Optional(CONF_CUSTOM_MODEL, default=custom_default)
         ] = TextSelector()
         if self._subentry_type == "conversation":
             hass_apis = [
@@ -440,7 +447,7 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
             models &= set(await client.async_list_models())
         except OpenCodeError:
             pass
-        if current := self.options.get(CONF_MODEL):
+        if (current := self.options.get(CONF_MODEL)) in CERTIFIED_MODELS:
             models.add(current)
         if DEFAULT_MODEL not in models:
             models.add(DEFAULT_MODEL)
