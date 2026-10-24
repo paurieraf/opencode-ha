@@ -131,6 +131,7 @@ async def test_add_conversation_subentry(hass, aioclient_mock):
             "llm_hass_api": ["assist"],
             "prompt": "",
             "max_tokens": 512,
+            "thinking": "disabled",
         },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
@@ -145,6 +146,7 @@ async def test_add_conversation_subentry(hass, aioclient_mock):
     )
     assert added.data["model"] == "glm-5.3"
     assert added.data["max_tokens"] == 512
+    assert added.data["thinking"] == "disabled"
 
 
 async def test_reconfigure_conversation_subentry(hass, aioclient_mock):

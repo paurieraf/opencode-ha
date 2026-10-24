@@ -43,6 +43,7 @@ from .const import (
     CONF_CUSTOM_MODEL,
     CONF_MAX_TOKENS,
     CONF_MODEL,
+    CONF_THINKING,
     DEFAULT_AI_TASK_NAME,
     DEFAULT_CONVERSATION_NAME,
     DEFAULT_MAX_TOKENS,
@@ -51,6 +52,10 @@ from .const import (
     FAMILY_AUTO,
     FAMILY_OPTIONS,
     MODEL_PRIVACY_NOTES,
+    THINKING_DEFAULT,
+    THINKING_DISABLED,
+    THINKING_ENABLED,
+    THINKING_OPTIONS,
 )
 
 VolDictType = dict[probatio.Marker, Any]
@@ -60,6 +65,12 @@ _FAMILY_LABELS = {
     "chat": "Chat Completions (OpenAI-compatible)",
     "messages": "Messages (Anthropic-compatible)",
     "responses": "Responses (OpenAI)",
+}
+
+_THINKING_LABELS = {
+    THINKING_DEFAULT: "Model default",
+    THINKING_ENABLED: "Enabled",
+    THINKING_DISABLED: "Disabled",
 }
 
 
@@ -82,6 +93,14 @@ def _family_options() -> list[SelectOptionDict]:
     return [
         SelectOptionDict(value=value, label=_FAMILY_LABELS[value])
         for value in FAMILY_OPTIONS
+    ]
+
+
+def _thinking_options() -> list[SelectOptionDict]:
+    """Build thinking selector options."""
+    return [
+        SelectOptionDict(value=value, label=_THINKING_LABELS[value])
+        for value in THINKING_OPTIONS
     ]
 
 
@@ -402,6 +421,11 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
                 CONF_API_FAMILY, default=options.get(CONF_API_FAMILY, FAMILY_AUTO)
             )
         ] = SelectSelector(SelectSelectorConfig(options=_family_options()))
+        step_schema[
+            probatio.Optional(
+                CONF_THINKING, default=options.get(CONF_THINKING, THINKING_DEFAULT)
+            )
+        ] = SelectSelector(SelectSelectorConfig(options=_thinking_options()))
 
         return self.async_show_form(
             step_id="init",

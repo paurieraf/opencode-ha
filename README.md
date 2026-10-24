@@ -46,6 +46,7 @@ Open the integration and choose **Add conversation agent**. Each agent has its o
 | **Control Home Assistant** | Off by default. Enables Assist intents. Text the model reads, such as entity names and states, can influence those actions. |
 | **Instructions** | Optional extra system prompt for this agent. |
 | **Maximum response tokens** | Upper limit per response. |
+| **Thinking** | Chat Completions models only. **Model default** sends nothing; **Disabled** or **Enabled** sends `thinking: {"type": ...}`. Disabling it on models that reason by default, such as DeepSeek V4.1 Flash, makes voice replies noticeably faster. |
 
 ### AI Tasks
 

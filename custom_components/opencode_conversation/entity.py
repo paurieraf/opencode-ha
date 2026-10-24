@@ -31,12 +31,14 @@ from .const import (
     CONF_API_FAMILY,
     CONF_MAX_TOKENS,
     CONF_MODEL,
+    CONF_THINKING,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL,
     DOMAIN,
     FAMILY_CHAT,
     FAMILY_MESSAGES,
     FAMILY_RESPONSES,
+    THINKING_DEFAULT,
     family_for,
 )
 
@@ -514,6 +516,9 @@ class OpenCodeBaseLLMEntity(Entity):
         }
         if max_tokens:
             body["max_tokens"] = max_tokens
+        thinking = self.subentry.data.get(CONF_THINKING, THINKING_DEFAULT)
+        if thinking != THINKING_DEFAULT:
+            body["thinking"] = {"type": thinking}
         if llm_api and llm_api.tools:
             body["tools"] = _format_tools_chat(llm_api.tools, llm_api.custom_serializer)
         if structure and structure_name:

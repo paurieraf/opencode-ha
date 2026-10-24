@@ -16,6 +16,7 @@ CONF_MODEL: Final = "model"
 CONF_CUSTOM_MODEL: Final = "custom_model"
 CONF_MAX_TOKENS: Final = "max_tokens"
 CONF_API_FAMILY: Final = "api_family"
+CONF_THINKING: Final = "thinking"
 
 DEFAULT_MODEL: Final = "deepseek-v4.1-flash"
 DEFAULT_MAX_TOKENS: Final = 1024
@@ -29,6 +30,15 @@ FAMILY_MESSAGES: Final = "messages"
 FAMILY_RESPONSES: Final = "responses"
 
 FAMILY_OPTIONS: Final = (FAMILY_AUTO, FAMILY_CHAT, FAMILY_MESSAGES, FAMILY_RESPONSES)
+
+# Thinking control for Chat Completions models that accept the
+# ``thinking: {"type": ...}`` request field (DeepSeek, GLM). "default" sends
+# nothing and leaves the model's own behaviour untouched.
+THINKING_DEFAULT: Final = "default"
+THINKING_ENABLED: Final = "enabled"
+THINKING_DISABLED: Final = "disabled"
+
+THINKING_OPTIONS: Final = (THINKING_DEFAULT, THINKING_ENABLED, THINKING_DISABLED)
 
 # Certified model -> wire family mapping.
 #

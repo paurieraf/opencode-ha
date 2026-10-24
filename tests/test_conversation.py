@@ -100,6 +100,56 @@ async def test_simple_conversation(hass, aioclient_mock):
     assert _conversation_entity(hass).supported_languages == "*"
 
 
+def _set_subentry_option(hass, entry, subentry_type: str, key: str, value) -> None:
+    """Update one option on the entry's subentry of the given type."""
+    subentry = next(
+        subentry
+        for subentry in entry.subentries.values()
+        if subentry.subentry_type == subentry_type
+    )
+    hass.config_entries.async_update_subentry(
+        entry, subentry, data={**subentry.data, key: value}
+    )
+
+
+async def test_chat_thinking_default_sends_nothing(hass, aioclient_mock):
+    """Without a thinking option the request leaves the model default alone."""
+    entry = await create_entry(hass, aioclient_mock, llm_hass_api=[])
+    fake = FakeClient([CHAT_EVENTS])
+    entry.runtime_data = fake
+
+    await _converse(hass, "Hi")
+
+    assert "thinking" not in fake.calls[0]
+
+
+async def test_chat_thinking_disabled(hass, aioclient_mock):
+    """Disabling thinking adds the thinking field to Chat Completions requests."""
+    entry = await create_entry(hass, aioclient_mock, llm_hass_api=[])
+    _set_subentry_option(hass, entry, "conversation", "thinking", "disabled")
+    await hass.async_block_till_done()
+    fake = FakeClient([CHAT_EVENTS])
+    entry.runtime_data = fake
+
+    result = await _converse(hass, "Hi")
+
+    assert result.response.speech["plain"]["speech"] == "Hello world"
+    assert fake.calls[0]["thinking"] == {"type": "disabled"}
+
+
+async def test_chat_thinking_enabled(hass, aioclient_mock):
+    """Enabling thinking asks for it explicitly."""
+    entry = await create_entry(hass, aioclient_mock, llm_hass_api=[])
+    _set_subentry_option(hass, entry, "conversation", "thinking", "enabled")
+    await hass.async_block_till_done()
+    fake = FakeClient([CHAT_EVENTS])
+    entry.runtime_data = fake
+
+    await _converse(hass, "Hi")
+
+    assert fake.calls[0]["thinking"] == {"type": "enabled"}
+
+
 async def test_tool_call_round_trip(hass, aioclient_mock):
     """Tool calls are executed and the results are sent back to the model."""
     entry = await create_entry(hass, aioclient_mock, llm_hass_api=["assist"])
@@ -294,6 +344,19 @@ async def test_messages_family_conversation(hass, aioclient_mock):
     assert result.response.speech["plain"]["speech"] == "Hello Claude"
     assert fake.calls[0]["model"] == "claude-haiku-5-5"
     assert "OpenCode Go" in fake.calls[0]["system"]
+
+
+async def test_messages_family_ignores_thinking_option(hass, aioclient_mock):
+    """The thinking option only applies to Chat Completions requests."""
+    entry = await create_entry(hass, aioclient_mock, model="claude-haiku-5-5", llm_hass_api=[])
+    _set_subentry_option(hass, entry, "conversation", "thinking", "disabled")
+    await hass.async_block_till_done()
+    fake = FakeClient(message_events=MESSAGE_EVENTS)
+    entry.runtime_data = fake
+
+    await _converse(hass, "Hi")
+
+    assert "thinking" not in fake.calls[0]
 
 
 async def test_messages_family_tool_loop(hass, aioclient_mock):
