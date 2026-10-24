@@ -169,7 +169,11 @@ async def test_deepseek_subentry_defaults(hass, aioclient_mock):
         context={"source": config_entries.SOURCE_USER},
     )
     schema = result["data_schema"].schema
-    defaults = {str(key): key.default() for key in schema if hasattr(key, "default")}
+    defaults = {
+        str(key): key.default()
+        for key in schema
+        if callable(getattr(key, "default", None))
+    }
     assert defaults["name"] == "DeepSeek Assistant"
     assert defaults["model"] == "deepseek-flash"
     options = schema["model"].config["options"]

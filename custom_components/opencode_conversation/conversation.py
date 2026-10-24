@@ -109,14 +109,20 @@ class OpenCodeConversationEntity(
         """
         message = str(err)
         if err.translation_domain == DOMAIN and err.translation_key:
-            translations = await async_get_translations(
-                self.hass, user_input.language, "exceptions", [DOMAIN]
-            )
-            template = translations.get(
-                f"component.{DOMAIN}.exceptions.{err.translation_key}.message"
-            )
-            if template:
-                message = template.format(**(err.translation_placeholders or {}))
+            key = f"component.{DOMAIN}.exceptions.{err.translation_key}.message"
+            # Voice pipelines pass a regional code such as "ca-ES". Translations
+            # are keyed by the base language, and Home Assistant silently falls
+            # back to English for an unknown code, so try the base language first.
+            language = user_input.language
+            for candidate in dict.fromkeys(
+                (language.replace("_", "-").split("-")[0], language)
+            ):
+                translations = await async_get_translations(
+                    self.hass, candidate, "exceptions", [DOMAIN]
+                )
+                if template := translations.get(key):
+                    message = template.format(**(err.translation_placeholders or {}))
+                    break
 
         response = intent.IntentResponse(language=user_input.language)
         response.async_set_error(intent.IntentResponseErrorCode.UNKNOWN, message)

@@ -444,8 +444,12 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
         step_schema[
             probatio.Required(CONF_MODEL, default=model_default)
         ] = SelectSelector(SelectSelectorConfig(options=_model_options(models, provider)))
+        # suggested_value, not default: the frontend omits a cleared field, and a
+        # default would put the old custom model back on submit.
         step_schema[
-            probatio.Optional(CONF_CUSTOM_MODEL, default=custom_default)
+            probatio.Optional(
+                CONF_CUSTOM_MODEL, description={"suggested_value": custom_default}
+            )
         ] = TextSelector()
         if self._subentry_type == "conversation":
             hass_apis = [
@@ -460,7 +464,10 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
                 SelectSelectorConfig(options=hass_apis, multiple=True)
             )
             step_schema[
-                probatio.Optional(CONF_PROMPT, default=options.get(CONF_PROMPT, ""))
+                probatio.Optional(
+                    CONF_PROMPT,
+                    description={"suggested_value": options.get(CONF_PROMPT, "")},
+                )
             ] = TextSelector(TextSelectorConfig(multiline=True))
         step_schema[
             probatio.Required(

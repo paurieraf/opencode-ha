@@ -193,8 +193,10 @@ async def test_reconfigure_conversation_subentry(hass, aioclient_mock):
 
 
 def _schema_default(result, key: str):
-    """Return the default of a field in a form result."""
+    """Return the default or suggested value of a field in a form result."""
     marker = next(m for m in result["data_schema"].schema if str(m) == key)
+    if marker.description and "suggested_value" in marker.description:
+        return marker.description["suggested_value"]
     return marker.default()
 
 
@@ -629,3 +631,36 @@ async def test_subentry_models_fetch_failure_falls_back(hass, aioclient_mock):
         context={"source": config_entries.SOURCE_USER},
     )
     assert result["type"] is FlowResultType.FORM
+
+
+async def test_clearing_custom_model_in_ui_restores_listed_model(hass, aioclient_mock):
+    """The frontend omits a cleared field; the old custom model must not come back."""
+    entry = await create_entry(hass, aioclient_mock)
+    subentry = next(
+        s for s in entry.subentries.values() if s.subentry_type == "conversation"
+    )
+    hass.config_entries.async_update_subentry(
+        entry,
+        subentry,
+        data={**subentry.data, "model": "model-inexistent-prova", "prompt": "Hola"},
+    )
+    await hass.async_block_till_done()
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "conversation"),
+        context={
+            "source": config_entries.SOURCE_RECONFIGURE,
+            "subentry_id": subentry.subentry_id,
+        },
+    )
+    # What the frontend submits after clearing custom_model and prompt.
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        {"model": "deepseek-v4.1-flash", "api_family": "auto", "max_tokens": 1024},
+    )
+    assert result["type"] is FlowResultType.ABORT
+    await hass.async_block_till_done()
+
+    data = hass.config_entries.async_entries(DOMAIN)[0].subentries[subentry.subentry_id].data
+    assert data["model"] == "deepseek-v4.1-flash"
+    assert "prompt" not in data or data["prompt"] == ""

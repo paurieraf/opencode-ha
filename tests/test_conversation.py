@@ -755,3 +755,15 @@ async def test_tool_loop_iteration_limit(hass, aioclient_mock):
     await _converse(hass, "Loop")
 
     assert len(fake.calls) == 10
+
+
+async def test_error_spoken_with_regional_language_code(hass, aioclient_mock):
+    """Voice pipelines pass "ca-ES"; the error still comes out in Catalan."""
+    entry = await create_entry(hass, aioclient_mock, llm_hass_api=[])
+    entry.runtime_data = FakeClient(error=OpenCodeModelUnavailable("gone"))
+
+    result = await _converse_in(hass, "Hola", "ca-ES")
+
+    assert result.response.speech["plain"]["speech"] == (
+        "El model deepseek-v4.1-flash ja no està disponible a OpenCode Go."
+    )
