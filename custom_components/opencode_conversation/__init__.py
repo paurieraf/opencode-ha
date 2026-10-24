@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 from .api import OpenCodeAuthError, OpenCodeClient, OpenCodeError
+from .const import CONF_PROVIDER, provider_for
 
 PLATFORMS = (Platform.CONVERSATION, Platform.AI_TASK)
 
@@ -19,14 +20,15 @@ async def async_update_options(hass: HomeAssistant, entry: OpenCodeConfigEntry) 
 
 async def async_setup_entry(hass: HomeAssistant, entry: OpenCodeConfigEntry) -> bool:
     """Set up OpenCode from a config entry."""
-    client = OpenCodeClient(hass, entry.data[CONF_API_KEY])
+    provider = provider_for(entry.data.get(CONF_PROVIDER))
+    client = OpenCodeClient(hass, entry.data[CONF_API_KEY], provider)
 
     try:
         await client.async_validate_key()
     except OpenCodeAuthError as err:
-        raise ConfigEntryAuthFailed("Invalid OpenCode API key") from err
+        raise ConfigEntryAuthFailed(f"Invalid {provider.name} API key") from err
     except OpenCodeError as err:
-        raise ConfigEntryNotReady("Unable to connect to OpenCode") from err
+        raise ConfigEntryNotReady(f"Unable to connect to {provider.name}") from err
 
     entry.runtime_data = client
 

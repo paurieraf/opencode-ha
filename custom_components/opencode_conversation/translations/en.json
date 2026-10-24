@@ -2,35 +2,37 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect to OpenCode",
-        "description": "Enter an OpenCode Go API key. Create or manage keys in the OpenCode Console after subscribing to Go.",
+        "title": "Connect to OpenCode or DeepSeek",
+        "description": "Choose the provider and enter its API key: an OpenCode Go key from the OpenCode Console, or a DeepSeek key from platform.deepseek.com.",
         "data": {
+          "provider": "Provider",
           "api_key": "API key"
         },
         "data_description": {
-          "api_key": "Stored in your Home Assistant configuration and sent only to opencode.ai."
+          "provider": "OpenCode Go serves many models through one subscription. The DeepSeek API serves DeepSeek models directly and charges a prepaid balance.",
+          "api_key": "Stored in your Home Assistant configuration and sent only to the selected provider (opencode.ai or api.deepseek.com)."
         }
       },
       "model": {
         "title": "Choose a model",
-        "description": "Pick the model for the first OpenCode assistant. You can add more assistants with other models later.",
+        "description": "Pick the model for the first assistant. You can add more assistants with other models later.",
         "data": {
           "model": "Model"
         },
         "data_description": {
-          "model": "Only models available to your subscription with a verified API family are listed. A note after a model name describes how OpenCode handles your prompts."
+          "model": "Only models available to your account with a verified API family are listed. A note after a model name describes how the provider handles your prompts."
         }
       },
       "reauth_confirm": {
-        "title": "Reauthenticate OpenCode",
-        "description": "The OpenCode API key was rejected. Enter a valid key for the same account.",
+        "title": "Reauthenticate {name}",
+        "description": "The {name} API key was rejected. Enter a valid key for the same account.",
         "data": {
           "api_key": "API key"
         }
       },
       "reconfigure": {
-        "title": "Update OpenCode API key",
-        "description": "Enter a new API key for this OpenCode account.",
+        "title": "Update {name} API key",
+        "description": "Enter a new API key for this {name} account.",
         "data": {
           "api_key": "API key"
         }
@@ -38,8 +40,8 @@
     },
     "error": {
       "invalid_auth": "Invalid API key",
-      "cannot_connect": "Failed to connect to OpenCode",
-      "usage_limit": "OpenCode usage limit reached. Try again later."
+      "cannot_connect": "Failed to connect to the provider",
+      "usage_limit": "Usage limit reached. Try again later."
     },
     "abort": {
       "already_configured": "This API key is already configured",
@@ -69,7 +71,7 @@
           },
           "data_description": {
             "name": "A name for this agent, for example the room or purpose it serves.",
-            "model": "Certified models available to your subscription. A note after a model name describes how OpenCode handles your prompts. Ignored when a custom model ID is set.",
+            "model": "Certified models available to your account. A note after a model name describes how the provider handles your prompts. Ignored when a custom model ID is set.",
             "custom_model": "Optional. Replaces the model above with an ID that is not in the list, for example a newly released model. Clear it to use the model selected in the list again.",
             "api_family": "Which API the model speaks. Leave on Automatic unless you use a custom model.",
             "llm_hass_api": "Off by default. Select Assist to let the model control your home. Any text the model reads, such as entity names and states, can influence those actions. Leave empty for a chat-only agent.",
@@ -103,7 +105,7 @@
           },
           "data_description": {
             "name": "A name for this AI task entity.",
-            "model": "Certified models available to your subscription. A note after a model name describes how OpenCode handles your prompts. Ignored when a custom model ID is set.",
+            "model": "Certified models available to your account. A note after a model name describes how the provider handles your prompts. Ignored when a custom model ID is set.",
             "custom_model": "Optional. Replaces the model above with an ID that is not in the list. Clear it to use the model selected in the list again.",
             "api_family": "Which API the model speaks. Leave on Automatic unless you use a custom model.",
             "max_tokens": "Upper limit for tokens the model may generate per task.",
@@ -118,28 +120,31 @@
   },
   "exceptions": {
     "api_error": {
-      "message": "Error talking to OpenCode: {error}"
+      "message": "Error talking to {service}: {error}"
     },
     "authentication_error": {
-      "message": "OpenCode rejected the API key. Please reauthenticate the integration."
+      "message": "{service} rejected the API key. Please reauthenticate the integration."
     },
     "empty_response": {
-      "message": "OpenCode returned no assistant response."
+      "message": "{service} returned no assistant response."
+    },
+    "insufficient_balance": {
+      "message": "The {service} account has no balance left. Top it up to keep using the assistant."
     },
     "invalid_structured_response": {
-      "message": "OpenCode returned an invalid structured response."
+      "message": "{service} returned an invalid structured response."
     },
     "model_unavailable": {
-      "message": "Model {model} is no longer available on OpenCode Go."
+      "message": "Model {model} is no longer available on {service}."
     },
     "protocol_unsupported": {
       "message": "Model {model} does not support the configured API family. Check the agent options."
     },
     "rate_limit": {
-      "message": "OpenCode usage limit reached for {model}. Try again later."
+      "message": "{service} usage limit reached for {model}. Try again later."
     },
     "rate_limit_retry": {
-      "message": "OpenCode usage limit reached for {model}. Try again in {seconds} seconds."
+      "message": "{service} usage limit reached for {model}. Try again in {seconds} seconds."
     }
   }
 }

@@ -1,4 +1,4 @@
-"""Async API client for the OpenCode Go gateway."""
+"""Async API client for the OpenCode Go gateway and other Chat Completions providers."""
 
 from __future__ import annotations
 
@@ -13,7 +13,15 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util.ulid import ulid_now
 
-from .const import BASE_URL, FAMILY_CHAT, FAMILY_MESSAGES, FAMILY_RESPONSES, INTEGRATION_VERSION
+from .const import (
+    FAMILY_CHAT,
+    FAMILY_MESSAGES,
+    FAMILY_RESPONSES,
+    INTEGRATION_VERSION,
+    PROVIDER_OPENCODE_GO,
+    PROVIDERS,
+    Provider,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,6 +60,10 @@ class OpenCodeTransientError(OpenCodeError):
     """A transient upstream error that is worth retrying."""
 
 
+class OpenCodeInsufficientBalance(OpenCodeError):
+    """The prepaid account has no balance left (DeepSeek returns HTTP 402)."""
+
+
 class OpenCodeRateLimited(OpenCodeError):
     """The account or model usage limit was reached."""
 
@@ -67,25 +79,38 @@ class OpenCodeRateLimited(OpenCodeError):
 
 
 class OpenCodeClient:
-    """Minimal async client for the OpenCode Go gateway.
+    """Minimal async client for the OpenCode Go gateway and the DeepSeek API.
 
-    All requests carry the client identity headers OpenCode requires:
-    a dedicated user agent and a stable ``x-opencode-session`` value.
-    The OpenCode gateway rejects inference requests without a session header.
+    All requests carry a dedicated user agent. For OpenCode they also carry
+    the stable ``x-opencode-session`` value it requires: the OpenCode gateway
+    rejects inference requests without a session header. Other providers do
+    not get the header.
     """
 
-    def __init__(self, hass: HomeAssistant, api_key: str) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        api_key: str,
+        provider: Provider = PROVIDERS[PROVIDER_OPENCODE_GO],
+    ) -> None:
         """Initialize the client."""
         self._api_key = api_key
+        self.provider = provider
         self._session = async_get_clientsession(hass)
         self._session_id = ulid_now()
+
+    def _session_headers(self, session_id: str) -> dict[str, str]:
+        """Return the session header, for providers that use one."""
+        if self.provider.session_header:
+            return {"x-opencode-session": session_id}
+        return {}
 
     @property
     def _base_headers(self) -> dict[str, str]:
         """Return the identity headers sent with every request."""
         return {
             "user-agent": f"oc-ha/{INTEGRATION_VERSION}",
-            "x-opencode-session": self._session_id,
+            **self._session_headers(self._session_id),
         }
 
     def _auth_headers(self, family: str) -> dict[str, str]:
@@ -124,6 +149,8 @@ class OpenCodeClient:
         status = resp.status
         if status in (401, 403):
             raise OpenCodeAuthError(message, status)
+        if status == 402:
+            raise OpenCodeInsufficientBalance(message, status)
         if status == 429:
             retry_after = resp.headers.get("retry-after")
             raise OpenCodeRateLimited(
@@ -155,7 +182,7 @@ class OpenCodeClient:
                 async with asyncio.timeout(REQUEST_TIMEOUT):
                     async with self._session.request(
                         method,
-                        BASE_URL + path,
+                        self.provider.base_url + path,
                         headers={**self._base_headers, **self._auth_headers(family)},
                         json=json_body,
                     ) as resp:
@@ -200,7 +227,7 @@ class OpenCodeClient:
             **self._base_headers,
             **self._auth_headers(family),
             "accept": "text/event-stream",
-            "x-opencode-session": session_id or self._session_id,
+            **self._session_headers(session_id or self._session_id),
         }
         request_body = {**body, "stream": True}
         timeout = aiohttp.ClientTimeout(
@@ -210,7 +237,7 @@ class OpenCodeClient:
         )
         try:
             async with self._session.post(
-                BASE_URL + path,
+                self.provider.base_url + path,
                 headers=headers,
                 json=request_body,
                 timeout=timeout,
@@ -238,11 +265,13 @@ class OpenCodeClient:
     # Public API
 
     async def async_get_usage(self) -> dict[str, Any]:
-        """Return the current Go plan usage windows."""
-        return await self._async_request("GET", "/usage", family=FAMILY_CHAT)
+        """Return the account status: Go plan usage windows, or DeepSeek balance."""
+        return await self._async_request(
+            "GET", self.provider.status_path, family=FAMILY_CHAT
+        )
 
     async def async_validate_key(self) -> None:
-        """Validate the API key by requesting the usage endpoint."""
+        """Validate the API key by requesting the account status endpoint."""
         await self.async_get_usage()
 
     async def async_list_models(self) -> list[str]:

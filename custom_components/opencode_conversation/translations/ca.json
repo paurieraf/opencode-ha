@@ -2,35 +2,37 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connecta amb OpenCode",
-        "description": "Introdueix una clau d'API d'OpenCode Go. Pots crear i gestionar claus a l'OpenCode Console un cop subscrit a Go.",
+        "title": "Connecta amb OpenCode o DeepSeek",
+        "description": "Tria el proveïdor i introdueix-ne la clau d'API: una clau d'OpenCode Go de l'OpenCode Console, o una clau de DeepSeek de platform.deepseek.com.",
         "data": {
+          "provider": "Proveïdor",
           "api_key": "Clau d'API"
         },
         "data_description": {
-          "api_key": "Es desa a la configuració de Home Assistant i només s'envia a opencode.ai."
+          "provider": "OpenCode Go dona accés a molts models amb una sola subscripció. L'API de DeepSeek serveix directament els models de DeepSeek i cobra d'un saldo prepagat.",
+          "api_key": "Es desa a la configuració de Home Assistant i només s'envia al proveïdor triat (opencode.ai o api.deepseek.com)."
         }
       },
       "model": {
         "title": "Tria un model",
-        "description": "Tria el model del primer assistent d'OpenCode. Més endavant pots afegir més assistents amb altres models.",
+        "description": "Tria el model del primer assistent. Més endavant pots afegir més assistents amb altres models.",
         "data": {
           "model": "Model"
         },
         "data_description": {
-          "model": "Només es mostren els models disponibles a la teva subscripció amb una família d'API verificada. La nota després del nom indica com tracta OpenCode les teves peticions."
+          "model": "Només es mostren els models disponibles al teu compte amb una família d'API verificada. La nota després del nom indica com tracta el proveïdor les teves peticions."
         }
       },
       "reauth_confirm": {
-        "title": "Torna a autenticar OpenCode",
-        "description": "OpenCode ha rebutjat la clau d'API. Introdueix una clau vàlida del mateix compte.",
+        "title": "Torna a autenticar {name}",
+        "description": "S'ha rebutjat la clau d'API de {name}. Introdueix una clau vàlida del mateix compte.",
         "data": {
           "api_key": "Clau d'API"
         }
       },
       "reconfigure": {
-        "title": "Actualitza la clau d'API d'OpenCode",
-        "description": "Introdueix una clau d'API nova per a aquest compte d'OpenCode.",
+        "title": "Actualitza la clau d'API de {name}",
+        "description": "Introdueix una clau d'API nova per a aquest compte de {name}.",
         "data": {
           "api_key": "Clau d'API"
         }
@@ -38,8 +40,8 @@
     },
     "error": {
       "invalid_auth": "Clau d'API no vàlida",
-      "cannot_connect": "No s'ha pogut connectar amb OpenCode",
-      "usage_limit": "S'ha arribat al límit d'ús d'OpenCode. Torna-ho a provar més tard."
+      "cannot_connect": "No s'ha pogut connectar amb el proveïdor",
+      "usage_limit": "S'ha arribat al límit d'ús. Torna-ho a provar més tard."
     },
     "abort": {
       "already_configured": "Aquesta clau d'API ja està configurada",
@@ -69,7 +71,7 @@
           },
           "data_description": {
             "name": "Un nom per a aquest agent, per exemple l'habitació o la funció que fa.",
-            "model": "Models certificats disponibles a la teva subscripció. La nota després del nom indica com tracta OpenCode les teves peticions. S'ignora si hi ha un ID de model personalitzat.",
+            "model": "Models certificats disponibles al teu compte. La nota després del nom indica com tracta el proveïdor les teves peticions. S'ignora si hi ha un ID de model personalitzat.",
             "custom_model": "Opcional. Substitueix el model de la llista per un ID que no hi surt, per exemple un model nou. Buida-ho per tornar a fer servir el model triat a la llista.",
             "api_family": "Quina API parla el model. Deixa-ho en Automàtic si no fas servir un model personalitzat.",
             "llm_hass_api": "Desactivat per defecte. Tria Assist perquè el model pugui controlar la casa. Qualsevol text que llegeixi el model, com els noms i estats de les entitats, pot influir en aquestes accions. Deixa-ho buit per a un agent només de xat.",
@@ -103,7 +105,7 @@
           },
           "data_description": {
             "name": "Un nom per a aquesta entitat de tasca d'IA.",
-            "model": "Models certificats disponibles a la teva subscripció. La nota després del nom indica com tracta OpenCode les teves peticions. S'ignora si hi ha un ID de model personalitzat.",
+            "model": "Models certificats disponibles al teu compte. La nota després del nom indica com tracta el proveïdor les teves peticions. S'ignora si hi ha un ID de model personalitzat.",
             "custom_model": "Opcional. Substitueix el model de la llista per un ID que no hi surt. Buida-ho per tornar a fer servir el model triat a la llista.",
             "api_family": "Quina API parla el model. Deixa-ho en Automàtic si no fas servir un model personalitzat.",
             "max_tokens": "Límit de tokens que el model pot generar per tasca.",
@@ -118,28 +120,31 @@
   },
   "exceptions": {
     "api_error": {
-      "message": "Error en parlar amb OpenCode: {error}"
+      "message": "Error en parlar amb {service}: {error}"
     },
     "authentication_error": {
-      "message": "OpenCode ha rebutjat la clau d'API. Torna a autenticar la integració."
+      "message": "{service} ha rebutjat la clau d'API. Torna a autenticar la integració."
     },
     "empty_response": {
-      "message": "OpenCode no ha retornat cap resposta."
+      "message": "{service} no ha retornat cap resposta."
+    },
+    "insufficient_balance": {
+      "message": "El compte de {service} s'ha quedat sense saldo. Recarrega'l per continuar fent servir l'assistent."
     },
     "invalid_structured_response": {
-      "message": "OpenCode ha retornat una resposta estructurada no vàlida."
+      "message": "{service} ha retornat una resposta estructurada no vàlida."
     },
     "model_unavailable": {
-      "message": "El model {model} ja no està disponible a OpenCode Go."
+      "message": "El model {model} ja no està disponible a {service}."
     },
     "protocol_unsupported": {
       "message": "El model {model} no admet la família d'API configurada. Revisa les opcions de l'agent."
     },
     "rate_limit": {
-      "message": "S'ha arribat al límit d'ús d'OpenCode per a {model}. Torna-ho a provar més tard."
+      "message": "S'ha arribat al límit d'ús de {service} per a {model}. Torna-ho a provar més tard."
     },
     "rate_limit_retry": {
-      "message": "S'ha arribat al límit d'ús d'OpenCode per a {model}. Torna-ho a provar d'aquí a {seconds} segons."
+      "message": "S'ha arribat al límit d'ús de {service} per a {model}. Torna-ho a provar d'aquí a {seconds} segons."
     }
   }
 }

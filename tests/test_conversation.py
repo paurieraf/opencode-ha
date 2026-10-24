@@ -419,7 +419,10 @@ async def test_model_unavailable_translated(hass, aioclient_mock):
     )
 
     assert error.translation_key == "model_unavailable"
-    assert error.translation_placeholders == {"model": "deepseek-v4.1-flash"}
+    assert error.translation_placeholders == {
+        "service": "OpenCode Go",
+        "model": "deepseek-v4.1-flash",
+    }
 
 
 async def _converse_in(hass, text: str, language: str) -> conversation.ConversationResult:
@@ -471,7 +474,11 @@ async def test_rate_limit_translated(hass, aioclient_mock):
         OpenCodeRateLimited("limit", retry_after=42), "glm-5.3"
     )
     assert error.translation_key == "rate_limit_retry"
-    assert error.translation_placeholders == {"model": "glm-5.3", "seconds": "42"}
+    assert error.translation_placeholders == {
+        "service": "OpenCode Go",
+        "model": "glm-5.3",
+        "seconds": "42",
+    }
 
     error = entity._async_api_error(OpenCodeRateLimited("limit"), "glm-5.3")
     assert error.translation_key == "rate_limit"

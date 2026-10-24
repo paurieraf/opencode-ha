@@ -15,6 +15,21 @@ BASE_URL = "https://opencode.ai/zen/go/v1"
 USAGE_URL = f"{BASE_URL}/usage"
 MODELS_URL = f"{BASE_URL}/models"
 
+DEEPSEEK_URL = "https://api.deepseek.com"
+DEEPSEEK_BALANCE_URL = f"{DEEPSEEK_URL}/user/balance"
+DEEPSEEK_MODELS_URL = f"{DEEPSEEK_URL}/models"
+DEEPSEEK_BALANCE = {
+    "is_available": True,
+    "balance_infos": [
+        {
+            "currency": "USD",
+            "total_balance": "3.31",
+            "granted_balance": "0.00",
+            "topped_up_balance": "3.31",
+        }
+    ],
+}
+
 
 class FakeClient:
     """Fake OpenCode client returning scripted streaming events."""
@@ -132,3 +147,29 @@ async def create_entry(
         assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return entry
+
+
+async def create_deepseek_entry(hass: HomeAssistant, aioclient_mock):
+    """Create and set up a DeepSeek config entry through the config flow."""
+    aioclient_mock.get(DEEPSEEK_BALANCE_URL, json=DEEPSEEK_BALANCE)
+    aioclient_mock.get(
+        DEEPSEEK_MODELS_URL,
+        json={
+            "object": "list",
+            "data": [{"id": "deepseek-flash"}, {"id": "deepseek-v4-pro"}],
+        },
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"provider": "deepseek", "api_key": "sk-deepseek"}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"model": "deepseek-flash"}
+    )
+    await hass.async_block_till_done()
+    return hass.config_entries.async_entry_for_domain_unique_id(
+        DOMAIN, result["result"].unique_id
+    )

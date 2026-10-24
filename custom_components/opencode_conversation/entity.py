@@ -22,6 +22,7 @@ from homeassistant.util.ulid import ulid_now
 from .api import (
     OpenCodeAuthError,
     OpenCodeError,
+    OpenCodeInsufficientBalance,
     OpenCodeModelUnavailable,
     OpenCodeProtocolError,
     OpenCodeRateLimited,
@@ -31,15 +32,16 @@ from .const import (
     CONF_API_FAMILY,
     CONF_MAX_TOKENS,
     CONF_MODEL,
+    CONF_PROVIDER,
     CONF_THINKING,
     DEFAULT_MAX_TOKENS,
-    DEFAULT_MODEL,
     DOMAIN,
     FAMILY_CHAT,
     FAMILY_MESSAGES,
     FAMILY_RESPONSES,
     THINKING_DEFAULT,
     family_for,
+    provider_for,
 )
 
 if TYPE_CHECKING:
@@ -172,10 +174,10 @@ def _reasoning_item(native: Any) -> dict[str, Any] | None:
     return None
 
 
-def _system_context(model: str, has_tools: bool) -> str:
+def _system_context(model: str, has_tools: bool, service: str) -> str:
     """Return a short context line giving the model base environment awareness."""
     context = (
-        f"You are running through OpenCode Go as model {model}. "
+        f"You are running through {service} as model {model}. "
         "Your environment is Home Assistant."
     )
     if has_tools:
@@ -351,12 +353,13 @@ class OpenCodeBaseLLMEntity(Entity):
         self.entry = entry
         self.subentry = subentry
         self._attr_unique_id = subentry.subentry_id
+        self.provider = provider_for(entry.data.get(CONF_PROVIDER))
         self._fallback_session_id = ulid_now()
         self._attr_device_info = dr.DeviceInfo(
             identifiers={(DOMAIN, subentry.subentry_id)},
             name=subentry.title,
-            manufacturer="OpenCode",
-            model=subentry.data.get(CONF_MODEL, DEFAULT_MODEL),
+            manufacturer=self.provider.name,
+            model=subentry.data.get(CONF_MODEL, self.provider.default_model),
             entry_type=dr.DeviceEntryType.SERVICE,
         )
 
@@ -367,11 +370,19 @@ class OpenCodeBaseLLMEntity(Entity):
 
     def _async_api_error(self, err: OpenCodeError, model: str) -> HomeAssistantError:
         """Translate an API error into a user facing error."""
+        service = self.provider.service_name
         if isinstance(err, OpenCodeAuthError):
             self.entry.async_start_reauth(self.hass)
             return HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="authentication_error",
+                translation_placeholders={"service": service},
+            )
+        if isinstance(err, OpenCodeInsufficientBalance):
+            return HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="insufficient_balance",
+                translation_placeholders={"service": service},
             )
         if isinstance(err, OpenCodeRateLimited):
             if err.retry_after:
@@ -379,6 +390,7 @@ class OpenCodeBaseLLMEntity(Entity):
                     translation_domain=DOMAIN,
                     translation_key="rate_limit_retry",
                     translation_placeholders={
+                        "service": service,
                         "model": model,
                         "seconds": str(int(err.retry_after)),
                     },
@@ -386,7 +398,7 @@ class OpenCodeBaseLLMEntity(Entity):
             return HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="rate_limit",
-                translation_placeholders={"model": model},
+                translation_placeholders={"service": service, "model": model},
             )
         if isinstance(err, OpenCodeProtocolError):
             return HomeAssistantError(
@@ -398,12 +410,12 @@ class OpenCodeBaseLLMEntity(Entity):
             return HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="model_unavailable",
-                translation_placeholders={"model": model},
+                translation_placeholders={"service": service, "model": model},
             )
         return HomeAssistantError(
             translation_domain=DOMAIN,
             translation_key="api_error",
-            translation_placeholders={"error": str(err)},
+            translation_placeholders={"service": service, "error": str(err)},
         )
 
     async def _async_handle_chat_log(
@@ -416,11 +428,15 @@ class OpenCodeBaseLLMEntity(Entity):
     ) -> None:
         """Generate a reply for the chat log, running the tool loop."""
         options = self.subentry.data
-        model = options.get(CONF_MODEL, DEFAULT_MODEL)
-        family = family_for(model, options.get(CONF_API_FAMILY))
+        model = options.get(CONF_MODEL, self.provider.default_model)
+        family = family_for(
+            model, options.get(CONF_API_FAMILY), self.provider.certified_models
+        )
         max_tokens = options.get(CONF_MAX_TOKENS, DEFAULT_MAX_TOKENS)
         session_id = chat_log.conversation_id or self._fallback_session_id
-        context = _system_context(model, chat_log.llm_api is not None)
+        context = _system_context(
+            model, chat_log.llm_api is not None, self.provider.service_name
+        )
         json_instruction = (
             _structured_prompt(
                 structure_name, _format_structured_output(structure, chat_log.llm_api)

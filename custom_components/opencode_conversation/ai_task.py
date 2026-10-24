@@ -63,6 +63,7 @@ class OpenCodeAITaskEntity(ai_task.AITaskEntity, OpenCodeBaseLLMEntity):
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="empty_response",
+                translation_placeholders={"service": self.provider.service_name},
             )
 
         text = chat_log.content[-1].content or ""
@@ -81,6 +82,7 @@ class OpenCodeAITaskEntity(ai_task.AITaskEntity, OpenCodeBaseLLMEntity):
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="invalid_structured_response",
+                translation_placeholders={"service": self.provider.service_name},
             ) from err
 
         return ai_task.GenDataTaskResult(

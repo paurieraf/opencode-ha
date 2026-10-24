@@ -38,24 +38,25 @@ from homeassistant.helpers.selector import (
 
 from .api import OpenCodeAuthError, OpenCodeClient, OpenCodeError, OpenCodeRateLimited
 from .const import (
-    CERTIFIED_MODELS,
     CONF_API_FAMILY,
     CONF_CUSTOM_MODEL,
     CONF_MAX_TOKENS,
     CONF_MODEL,
+    CONF_PROVIDER,
     CONF_THINKING,
-    DEFAULT_AI_TASK_NAME,
-    DEFAULT_CONVERSATION_NAME,
     DEFAULT_MAX_TOKENS,
-    DEFAULT_MODEL,
     DOMAIN,
     FAMILY_AUTO,
     FAMILY_OPTIONS,
-    MODEL_PRIVACY_NOTES,
+    PROVIDER_DEEPSEEK,
+    PROVIDER_OPENCODE_GO,
+    PROVIDERS,
     THINKING_DEFAULT,
     THINKING_DISABLED,
     THINKING_ENABLED,
     THINKING_OPTIONS,
+    Provider,
+    provider_for,
 )
 
 VolDictType = dict[probatio.Marker, Any]
@@ -67,6 +68,11 @@ _FAMILY_LABELS = {
     "responses": "Responses (OpenAI)",
 }
 
+_PROVIDER_LABELS = {
+    PROVIDER_OPENCODE_GO: "OpenCode Go",
+    PROVIDER_DEEPSEEK: "DeepSeek API",
+}
+
 _THINKING_LABELS = {
     THINKING_DEFAULT: "Model default",
     THINKING_ENABLED: "Enabled",
@@ -74,17 +80,25 @@ _THINKING_LABELS = {
 }
 
 
-def _model_label(model: str) -> str:
+def _model_label(model: str, provider: Provider) -> str:
     """Return the model name with its data handling note, if it has one."""
-    if note := MODEL_PRIVACY_NOTES.get(model):
+    if note := provider.privacy_notes.get(model):
         return f"{model} ({note})"
     return model
 
 
-def _model_options(models: list[str]) -> list[SelectOptionDict]:
+def _model_options(models: list[str], provider: Provider) -> list[SelectOptionDict]:
     """Build model selector options."""
     return [
-        SelectOptionDict(value=model, label=_model_label(model)) for model in models
+        SelectOptionDict(value=model, label=_model_label(model, provider))
+        for model in models
+    ]
+
+
+def _provider_options() -> list[SelectOptionDict]:
+    """Build provider selector options."""
+    return [
+        SelectOptionDict(value=value, label=_PROVIDER_LABELS[value]) for value in PROVIDERS
     ]
 
 
@@ -115,6 +129,20 @@ def _api_key_schema() -> probatio.Schema:
     )
 
 
+def _user_schema() -> probatio.Schema:
+    """Return the schema for the first setup step."""
+    return probatio.Schema(
+        {
+            probatio.Required(CONF_PROVIDER, default=PROVIDER_OPENCODE_GO): SelectSelector(
+                SelectSelectorConfig(options=_provider_options())
+            ),
+            probatio.Required(CONF_API_KEY): TextSelector(
+                TextSelectorConfig(type=TextSelectorType.PASSWORD)
+            ),
+        }
+    )
+
+
 def _api_key_fingerprint(api_key: str) -> str:
     """Return the stored identifier for an API key."""
     return sha256(api_key.encode()).hexdigest()
@@ -128,7 +156,8 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the flow."""
         self._api_key: str | None = None
-        self._available_models: list[str] = sorted(CERTIFIED_MODELS)
+        self._provider: Provider = provider_for(None)
+        self._available_models: list[str] = sorted(self._provider.certified_models)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -137,7 +166,8 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             api_key = user_input[CONF_API_KEY]
-            client = OpenCodeClient(self.hass, api_key)
+            provider = provider_for(user_input.get(CONF_PROVIDER))
+            client = OpenCodeClient(self.hass, api_key, provider)
             try:
                 await client.async_validate_key()
             except OpenCodeAuthError:
@@ -150,19 +180,18 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(_api_key_fingerprint(api_key))
                 self._abort_if_unique_id_configured()
                 self._api_key = api_key
+                self._provider = provider
+                certified = set(provider.certified_models)
                 try:
                     live = set(await client.async_list_models())
-                    self._available_models = (
-                        sorted(set(CERTIFIED_MODELS) & live)
-                        or sorted(CERTIFIED_MODELS)
-                    )
+                    self._available_models = sorted(certified & live) or sorted(certified)
                 except OpenCodeError:
-                    self._available_models = sorted(CERTIFIED_MODELS)
+                    self._available_models = sorted(certified)
                 return await self.async_step_model()
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_api_key_schema(),
+            data_schema=_user_schema(),
             errors=errors,
         )
 
@@ -173,9 +202,10 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
         assert self._api_key is not None
         if user_input is not None:
             model = user_input[CONF_MODEL]
+            provider = self._provider
             return self.async_create_entry(
-                title="OpenCode",
-                data={CONF_API_KEY: self._api_key},
+                title=provider.name,
+                data={CONF_API_KEY: self._api_key, CONF_PROVIDER: provider.key},
                 subentries=[
                     {
                         "subentry_type": "conversation",
@@ -185,7 +215,7 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
                             CONF_MAX_TOKENS: DEFAULT_MAX_TOKENS,
                             CONF_API_FAMILY: FAMILY_AUTO,
                         },
-                        "title": DEFAULT_CONVERSATION_NAME,
+                        "title": provider.default_conversation_name,
                         "unique_id": None,
                     },
                     {
@@ -195,22 +225,23 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
                             CONF_MAX_TOKENS: DEFAULT_MAX_TOKENS,
                             CONF_API_FAMILY: FAMILY_AUTO,
                         },
-                        "title": DEFAULT_AI_TASK_NAME,
+                        "title": provider.default_ai_task_name,
                         "unique_id": None,
                     },
                 ],
             )
 
+        default_model = self._provider.default_model
         models = self._available_models
-        if DEFAULT_MODEL not in models:
-            models = [DEFAULT_MODEL, *models]
+        if default_model not in models:
+            models = [default_model, *models]
 
         return self.async_show_form(
             step_id="model",
             data_schema=probatio.Schema(
                 {
-                    probatio.Required(CONF_MODEL, default=DEFAULT_MODEL): SelectSelector(
-                        SelectSelectorConfig(options=_model_options(models))
+                    probatio.Required(CONF_MODEL, default=default_model): SelectSelector(
+                        SelectSelectorConfig(options=_model_options(models, self._provider))
                     ),
                 }
             ),
@@ -229,7 +260,10 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             api_key = user_input[CONF_API_KEY]
-            client = OpenCodeClient(self.hass, api_key)
+            entry = self._get_reauth_entry()
+            client = OpenCodeClient(
+                self.hass, api_key, provider_for(entry.data.get(CONF_PROVIDER))
+            )
             try:
                 await client.async_validate_key()
             except OpenCodeAuthError:
@@ -239,7 +273,6 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
             except OpenCodeError:
                 errors["base"] = "cannot_connect"
             else:
-                entry = self._get_reauth_entry()
                 fingerprint = _api_key_fingerprint(api_key)
                 if self._fingerprint_in_use(entry, fingerprint):
                     return self.async_abort(reason="already_configured")
@@ -249,10 +282,12 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
                     data_updates={CONF_API_KEY: api_key},
                 )
 
+        provider = provider_for(self._get_reauth_entry().data.get(CONF_PROVIDER))
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=_api_key_schema(),
             errors=errors,
+            description_placeholders={"name": provider.name},
         )
 
     async def async_step_reconfigure(
@@ -262,7 +297,10 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             api_key = user_input[CONF_API_KEY]
-            client = OpenCodeClient(self.hass, api_key)
+            entry = self._get_reconfigure_entry()
+            client = OpenCodeClient(
+                self.hass, api_key, provider_for(entry.data.get(CONF_PROVIDER))
+            )
             try:
                 await client.async_validate_key()
             except OpenCodeAuthError:
@@ -272,7 +310,6 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
             except OpenCodeError:
                 errors["base"] = "cannot_connect"
             else:
-                entry = self._get_reconfigure_entry()
                 fingerprint = _api_key_fingerprint(api_key)
                 if self._fingerprint_in_use(entry, fingerprint):
                     return self.async_abort(reason="already_configured")
@@ -282,10 +319,12 @@ class OpenCodeConfigFlow(ConfigFlow, domain=DOMAIN):
                     data_updates={CONF_API_KEY: api_key},
                 )
 
+        provider = provider_for(self._get_reconfigure_entry().data.get(CONF_PROVIDER))
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=_api_key_schema(),
             errors=errors,
+            description_placeholders={"name": provider.name},
         )
 
     def _fingerprint_in_use(self, entry: ConfigEntry, fingerprint: str) -> bool:
@@ -313,6 +352,11 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
     options: dict[str, Any]
 
     @property
+    def _provider(self) -> Provider:
+        """Return the provider of the parent entry."""
+        return provider_for(self._get_entry().data.get(CONF_PROVIDER))
+
+    @property
     def _is_new(self) -> bool:
         """Return if this is a new subentry."""
         return self.source == SOURCE_USER
@@ -321,8 +365,8 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
     def _default_title(self) -> str:
         """Return the default title for this subentry type."""
         if self._subentry_type == "ai_task_data":
-            return DEFAULT_AI_TASK_NAME
-        return DEFAULT_CONVERSATION_NAME
+            return self._provider.default_ai_task_name
+        return self._provider.default_conversation_name
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -330,13 +374,13 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
         """Add a subentry."""
         if self._subentry_type == "ai_task_data":
             self.options = {
-                CONF_MODEL: DEFAULT_MODEL,
+                CONF_MODEL: self._provider.default_model,
                 CONF_MAX_TOKENS: DEFAULT_MAX_TOKENS,
                 CONF_API_FAMILY: FAMILY_AUTO,
             }
         else:
             self.options = {
-                CONF_MODEL: DEFAULT_MODEL,
+                CONF_MODEL: self._provider.default_model,
                 CONF_PROMPT: "",
                 CONF_MAX_TOKENS: DEFAULT_MAX_TOKENS,
                 CONF_API_FAMILY: FAMILY_AUTO,
@@ -381,14 +425,16 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
                 entry, self._get_reconfigure_subentry(), data=data
             )
 
+        provider = self._provider
+        default_model = provider.default_model
         models = await self._async_available_models(entry)
-        current_model = options.get(CONF_MODEL, DEFAULT_MODEL)
+        current_model = options.get(CONF_MODEL, default_model)
         # A custom model is shown in its own field, so clearing that field and
         # saving falls back to a model from the list instead of keeping it.
         if current_model in models:
             model_default, custom_default = current_model, ""
         else:
-            model_default, custom_default = DEFAULT_MODEL, current_model
+            model_default, custom_default = default_model, current_model
 
         step_schema: VolDictType = {}
         if self._is_new:
@@ -397,7 +443,7 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
             )
         step_schema[
             probatio.Required(CONF_MODEL, default=model_default)
-        ] = SelectSelector(SelectSelectorConfig(options=_model_options(models)))
+        ] = SelectSelector(SelectSelectorConfig(options=_model_options(models, provider)))
         step_schema[
             probatio.Optional(CONF_CUSTOM_MODEL, default=custom_default)
         ] = TextSelector()
@@ -441,14 +487,14 @@ class OpenCodeSubentryFlowHandler(ConfigSubentryFlow):
 
     async def _async_available_models(self, entry: ConfigEntry) -> list[str]:
         """Return selectable models for this entry."""
-        models = set(CERTIFIED_MODELS)
+        provider = self._provider
+        models = set(provider.certified_models)
         try:
             client: OpenCodeClient = entry.runtime_data
             models &= set(await client.async_list_models())
         except OpenCodeError:
             pass
-        if (current := self.options.get(CONF_MODEL)) in CERTIFIED_MODELS:
+        if (current := self.options.get(CONF_MODEL)) in provider.certified_models:
             models.add(current)
-        if DEFAULT_MODEL not in models:
-            models.add(DEFAULT_MODEL)
+        models.add(provider.default_model)
         return sorted(models)
