@@ -101,6 +101,10 @@ async def test_setup_and_unload(hass, aioclient_mock):
     ]
     assert len(conversation_entities) == 1
     assert len(ai_task_entities) == 1
+    # Entities are added while the entry is still setting up; they must not
+    # be stuck as unavailable once setup finishes.
+    assert hass.states.get("conversation.opencode_assistant").state != "unavailable"
+    assert hass.states.get("ai_task.opencode_ai_task").state != "unavailable"
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()

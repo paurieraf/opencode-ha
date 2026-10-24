@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Final
 import probatio
 from homeassistant.components import conversation
 from homeassistant.components.conversation import ChatLog
-from homeassistant.config_entries import ConfigEntryState, ConfigSubentry
+from homeassistant.config_entries import ConfigSubentry
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import llm
@@ -364,11 +364,6 @@ class OpenCodeBaseLLMEntity(Entity):
     def client(self) -> Any:
         """Return the API client stored on the config entry."""
         return self.entry.runtime_data
-
-    @property
-    def available(self) -> bool:
-        """Return if the entity is available."""
-        return self.entry.state is ConfigEntryState.LOADED
 
     def _async_api_error(self, err: OpenCodeError, model: str) -> HomeAssistantError:
         """Translate an API error into a user facing error."""
