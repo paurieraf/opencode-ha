@@ -106,8 +106,6 @@ MODEL_PRIVACY_NOTES: Final[dict[str, str]] = {
 }
 
 
-
-
 @dataclass(frozen=True, kw_only=True)
 class Provider:
     """An API provider the integration can talk to.

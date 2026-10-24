@@ -255,3 +255,25 @@ async def test_diagnostics_show_provider(hass, aioclient_mock):
     assert set(diagnostics["certified_models"]) == {"deepseek-flash", "deepseek-v4-pro"}
     assert diagnostics["usage"] == DEEPSEEK_BALANCE
     assert diagnostics["entry"]["data"]["api_key"] == "**REDACTED**"
+
+
+async def test_max_tokens_sent_as_integer(hass, aioclient_mock):
+    """The UI stores max_tokens as a float (512.0); requests must send an integer."""
+    entry = await create_deepseek_entry(hass, aioclient_mock)
+    subentry = next(
+        s for s in entry.subentries.values() if s.subentry_type == "conversation"
+    )
+    hass.config_entries.async_update_subentry(
+        entry, subentry, data={**subentry.data, "max_tokens": 512.0}
+    )
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    fake = FakeClient([CHAT_EVENTS])
+    entry.runtime_data = fake
+
+    await conversation.async_converse(
+        hass, "Hola", None, Context(), "ca", agent_id="conversation.deepseek_assistant"
+    )
+
+    assert fake.calls[0]["max_tokens"] == 512
+    assert type(fake.calls[0]["max_tokens"]) is int

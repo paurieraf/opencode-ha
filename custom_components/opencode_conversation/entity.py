@@ -432,7 +432,9 @@ class OpenCodeBaseLLMEntity(Entity):
         family = family_for(
             model, options.get(CONF_API_FAMILY), self.provider.certified_models
         )
-        max_tokens = options.get(CONF_MAX_TOKENS, DEFAULT_MAX_TOKENS)
+        # The number selector stores floats (1024.0); DeepSeek rejects non-integer
+        # max_tokens with a 422, so normalise it once here.
+        max_tokens = int(options.get(CONF_MAX_TOKENS) or DEFAULT_MAX_TOKENS)
         session_id = chat_log.conversation_id or self._fallback_session_id
         context = _system_context(
             model, chat_log.llm_api is not None, self.provider.service_name
