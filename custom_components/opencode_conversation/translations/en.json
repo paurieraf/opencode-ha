@@ -2,15 +2,17 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect to OpenCode or DeepSeek",
-        "description": "Choose the provider and enter its API key: an OpenCode Go key from the OpenCode Console, or a DeepSeek key from platform.deepseek.com.",
+        "title": "Connect to OpenCode, DeepSeek or Hermes",
+        "description": "Choose the provider and enter its API key: an OpenCode Go key from the OpenCode Console, a DeepSeek key from platform.deepseek.com, or the API_SERVER_KEY of a Hermes Agent profile.",
         "data": {
           "provider": "Provider",
-          "api_key": "API key"
+          "api_key": "API key",
+          "base_url": "Server URL (Hermes only)"
         },
         "data_description": {
           "provider": "OpenCode Go serves many models through one subscription. The DeepSeek API serves DeepSeek models directly and charges a prepaid balance.",
-          "api_key": "Stored in your Home Assistant configuration and sent only to the selected provider (opencode.ai or api.deepseek.com)."
+          "api_key": "Stored in your Home Assistant configuration and sent only to the selected provider (opencode.ai or api.deepseek.com).",
+          "base_url": "Base URL of the Hermes Agent API server, including the profile prefix, for example http://10.1.1.114:8642/p/tono/v1. Leave empty for OpenCode Go and DeepSeek."
         }
       },
       "model": {
@@ -41,7 +43,8 @@
     "error": {
       "invalid_auth": "Invalid API key",
       "cannot_connect": "Failed to connect to the provider",
-      "usage_limit": "Usage limit reached. Try again later."
+      "usage_limit": "Usage limit reached. Try again later.",
+      "base_url_required": "Enter the server URL of the Hermes Agent API server."
     },
     "abort": {
       "already_configured": "This API key is already configured",

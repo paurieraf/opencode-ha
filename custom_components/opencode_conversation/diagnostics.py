@@ -9,7 +9,7 @@ from homeassistant.const import CONF_API_KEY, CONF_PROMPT
 from homeassistant.core import HomeAssistant
 
 from .api import OpenCodeClient, OpenCodeError
-from .const import CONF_PROVIDER, INTEGRATION_VERSION, provider_for
+from .const import INTEGRATION_VERSION, provider_for_entry
 
 REDACTED = "**REDACTED**"
 
@@ -19,7 +19,7 @@ async def async_get_config_entry_diagnostics(
 ) -> dict[str, Any]:
     """Return diagnostics for an OpenCode config entry."""
     client: OpenCodeClient = entry.runtime_data
-    provider = provider_for(entry.data.get(CONF_PROVIDER))
+    provider = provider_for_entry(entry.data)
 
     diagnostics: dict[str, Any] = {
         "integration_version": INTEGRATION_VERSION,

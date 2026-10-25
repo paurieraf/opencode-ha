@@ -2,9 +2,10 @@
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
+from urllib.parse import urlparse
 
 DOMAIN: Final = "opencode_conversation"
 
@@ -20,6 +21,7 @@ CONF_MAX_TOKENS: Final = "max_tokens"
 CONF_API_FAMILY: Final = "api_family"
 CONF_THINKING: Final = "thinking"
 CONF_PROVIDER: Final = "provider"
+CONF_BASE_URL: Final = "base_url"
 
 DEFAULT_MODEL: Final = "deepseek-v4.1-flash"
 DEFAULT_MAX_TOKENS: Final = 1024
@@ -125,6 +127,18 @@ class Provider:
     certified_models: Mapping[str, str]
     default_model: str
     privacy_notes: Mapping[str, str] = field(default_factory=dict)
+    # Extra headers sent with every request.
+    extra_headers: Mapping[str, str] = field(default_factory=dict)
+    # The user enters the base URL (a self-hosted server) instead of a fixed one.
+    configurable_url: bool = False
+    # Whether Home Assistant's LLM APIs (tools) can be offered to the model. A
+    # provider that runs its own agent with its own tools sets this to False.
+    hass_tools: bool = True
+    # Turn reasoning on or off through ``model_options`` instead of the
+    # Chat Completions ``thinking`` field.
+    reasoning_option: bool = False
+    # Subentry types created with the entry.
+    initial_subentries: tuple[str, ...] = ("conversation", "ai_task_data")
 
     @property
     def default_conversation_name(self) -> str:
@@ -139,6 +153,7 @@ class Provider:
 
 PROVIDER_OPENCODE_GO: Final = "opencode_go"
 PROVIDER_DEEPSEEK: Final = "deepseek"
+PROVIDER_HERMES: Final = "hermes"
 
 # Source: DeepSeek API docs (https://api-docs.deepseek.com), checked against
 # the live API on 2026-10-25. ``deepseek-flash`` is an alias that DeepSeek
@@ -180,14 +195,52 @@ PROVIDERS: Final[dict[str, Provider]] = {
         default_model="deepseek-flash",
         privacy_notes=DEEPSEEK_PRIVACY_NOTES,
     ),
+    # Hermes Agent API server (OpenAI-compatible), one profile per base URL,
+    # e.g. ``http://10.1.1.114:8642/p/tono/v1``. Hermes runs its own agent and
+    # tools server side, so no Home Assistant tools are sent; the model list is
+    # the profile name served at ``/models``. Requests share one long-term
+    # memory scope through ``X-Hermes-Session-Key``.
+    PROVIDER_HERMES: Provider(
+        key=PROVIDER_HERMES,
+        name="Hermes",
+        service_name="Hermes Agent",
+        base_url="",
+        host="",
+        status_path="/models",
+        session_header=False,
+        certified_models={},
+        default_model="",
+        extra_headers={"X-Hermes-Session-Key": "home-assistant"},
+        configurable_url=True,
+        hass_tools=False,
+        reasoning_option=True,
+        initial_subentries=("conversation",),
+    ),
 }
 
 PROVIDER_OPTIONS: Final = tuple(PROVIDERS)
 
 
-def provider_for(key: str | None) -> Provider:
-    """Return a provider, defaulting to OpenCode Go for entries made before providers."""
-    return PROVIDERS.get(key or PROVIDER_OPENCODE_GO, PROVIDERS[PROVIDER_OPENCODE_GO])
+def provider_for(key: str | None, base_url: str | None = None) -> Provider:
+    """Return a provider, defaulting to OpenCode Go for entries made before providers.
+
+    A provider with a configurable URL gets the entry's base URL.
+    """
+    provider = PROVIDERS.get(key or PROVIDER_OPENCODE_GO, PROVIDERS[PROVIDER_OPENCODE_GO])
+    if provider.configurable_url and base_url:
+        url = normalize_base_url(base_url)
+        return replace(provider, base_url=url, host=urlparse(url).netloc)
+    return provider
+
+
+def provider_for_entry(data: Mapping[str, Any]) -> Provider:
+    """Return the provider of a config entry's data."""
+    return provider_for(data.get(CONF_PROVIDER), data.get(CONF_BASE_URL))
+
+
+def normalize_base_url(url: str) -> str:
+    """Return a base URL without surrounding spaces or a trailing slash."""
+    return url.strip().rstrip("/")
 
 
 def family_for(

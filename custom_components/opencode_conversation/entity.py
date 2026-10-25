@@ -32,7 +32,6 @@ from .const import (
     CONF_API_FAMILY,
     CONF_MAX_TOKENS,
     CONF_MODEL,
-    CONF_PROVIDER,
     CONF_THINKING,
     DEFAULT_MAX_TOKENS,
     DOMAIN,
@@ -40,8 +39,9 @@ from .const import (
     FAMILY_MESSAGES,
     FAMILY_RESPONSES,
     THINKING_DEFAULT,
+    THINKING_ENABLED,
     family_for,
-    provider_for,
+    provider_for_entry,
 )
 
 if TYPE_CHECKING:
@@ -353,7 +353,7 @@ class OpenCodeBaseLLMEntity(Entity):
         self.entry = entry
         self.subentry = subentry
         self._attr_unique_id = subentry.subentry_id
-        self.provider = provider_for(entry.data.get(CONF_PROVIDER))
+        self.provider = provider_for_entry(entry.data)
         self._fallback_session_id = ulid_now()
         self._attr_device_info = dr.DeviceInfo(
             identifiers={(DOMAIN, subentry.subentry_id)},
@@ -531,8 +531,13 @@ class OpenCodeBaseLLMEntity(Entity):
             body["max_tokens"] = max_tokens
         thinking = self.subentry.data.get(CONF_THINKING, THINKING_DEFAULT)
         if thinking != THINKING_DEFAULT:
-            body["thinking"] = {"type": thinking}
-        if llm_api and llm_api.tools:
+            if self.provider.reasoning_option:
+                body["model_options"] = {
+                    "reasoning": {"enabled": thinking == THINKING_ENABLED}
+                }
+            else:
+                body["thinking"] = {"type": thinking}
+        if llm_api and llm_api.tools and self.provider.hass_tools:
             body["tools"] = _format_tools_chat(llm_api.tools, llm_api.custom_serializer)
         if structure and structure_name:
             body["response_format"] = {
