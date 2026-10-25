@@ -128,6 +128,9 @@
     "authentication_error": {
       "message": "{service} ha rechazado la clave de API. Vuelve a autenticar la integración."
     },
+    "cannot_reach": {
+      "message": "Ahora no puedo hablar con {service}. Vuelve a intentarlo dentro de un rato."
+    },
     "empty_response": {
       "message": "{service} no ha devuelto ninguna respuesta."
     },

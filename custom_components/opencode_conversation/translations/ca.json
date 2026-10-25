@@ -128,6 +128,9 @@
     "authentication_error": {
       "message": "{service} ha rebutjat la clau d'API. Torna a autenticar la integració."
     },
+    "cannot_reach": {
+      "message": "Ara no puc parlar amb {service}. Torna-ho a provar d'aquí a una estona."
+    },
     "empty_response": {
       "message": "{service} no ha retornat cap resposta."
     },

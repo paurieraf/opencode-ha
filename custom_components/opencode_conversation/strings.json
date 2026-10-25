@@ -128,6 +128,9 @@
     "authentication_error": {
       "message": "{service} rejected the API key. Please reauthenticate the integration."
     },
+    "cannot_reach": {
+      "message": "I can't reach {service} right now. Try again in a moment."
+    },
     "empty_response": {
       "message": "{service} returned no assistant response."
     },

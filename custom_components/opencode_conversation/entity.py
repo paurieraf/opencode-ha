@@ -21,6 +21,7 @@ from homeassistant.util.ulid import ulid_now
 
 from .api import (
     OpenCodeAuthError,
+    OpenCodeConnectionError,
     OpenCodeError,
     OpenCodeInsufficientBalance,
     OpenCodeModelUnavailable,
@@ -412,6 +413,15 @@ class OpenCodeBaseLLMEntity(Entity):
                 translation_key="model_unavailable",
                 translation_placeholders={"service": service, "model": model},
             )
+        if isinstance(err, OpenCodeConnectionError):
+            # Spoken by voice pipelines: a short sentence, without the socket
+            # details (host, port, errno) that only belong in the log.
+            _LOGGER.warning("Cannot reach %s: %s", service, err)
+            return HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="cannot_reach",
+                translation_placeholders={"service": service},
+            )
         return HomeAssistantError(
             translation_domain=DOMAIN,
             translation_key="api_error",
@@ -550,6 +560,7 @@ class OpenCodeBaseLLMEntity(Entity):
             }
 
         role_sent = False
+        text_started = False
         pending_tools: dict[int, dict[str, str]] = {}
         async for event in self.client.stream_chat_completions(
             body, session_id=session_id
@@ -567,7 +578,13 @@ class OpenCodeBaseLLMEntity(Entity):
             if not role_sent and (delta or choice.get("finish_reason")):
                 yield {"role": "assistant"}
                 role_sent = True
-            if content := delta.get("content"):
+            content = delta.get("content") or ""
+            if not text_started:
+                # Agents that run tools server side (Hermes) can open the reply
+                # with blank lines; they would reach the TTS and the chat as is.
+                content = content.lstrip()
+            if content:
+                text_started = True
                 yield {"content": content}
             if thinking := delta.get("reasoning_content"):
                 yield {"thinking_content": thinking}
