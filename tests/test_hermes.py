@@ -9,7 +9,10 @@ from homeassistant.const import CONF_LLM_HASS_API
 from homeassistant.core import Context
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.opencode_conversation.api import OpenCodeClient
+from custom_components.opencode_conversation.api import (
+    OpenCodeClient,
+    OpenCodeConnectionError,
+)
 from custom_components.opencode_conversation.const import (
     DOMAIN,
     PROVIDER_HERMES,
@@ -158,3 +161,42 @@ async def test_subentry_form_hides_hass_apis(hass, aioclient_mock):
     schema = result["data_schema"].schema
     assert CONF_LLM_HASS_API not in {str(key) for key in schema}
     assert [o["value"] for o in schema["model"].config["options"]] == ["tono"]
+
+
+async def test_unreachable_server_is_spoken_short_in_catalan(hass, aioclient_mock):
+    """A down Hermes server gives a short sentence, not the socket error."""
+    entry = await create_hermes_entry(hass, aioclient_mock)
+    entry.runtime_data = FakeClient(
+        error=OpenCodeConnectionError(
+            "Error talking to OpenCode: Cannot connect to host 10.1.1.114:8642 ssl:default"
+        )
+    )
+
+    result = await conversation.async_converse(
+        hass, "què sopem avui?", None, Context(), "ca-ES", agent_id="conversation.hermes_assistant"
+    )
+
+    speech = result.response.speech["plain"]["speech"]
+    assert speech == "Ara no puc parlar amb Hermes Agent. Torna-ho a provar d'aquí a una estona."
+    assert "10.1.1.114" not in speech
+
+
+async def test_leading_blank_lines_are_dropped(hass, aioclient_mock):
+    """Blank lines at the start of a reply (after server side tools) never reach the TTS."""
+    entry = await create_hermes_entry(hass, aioclient_mock)
+    entry.runtime_data = FakeClient(
+        [
+            [
+                {"choices": [{"delta": {"role": "assistant", "content": "\n\n"}}]},
+                {"choices": [{"delta": {"content": "\nfet. llum de peu"}}]},
+                {"choices": [{"delta": {"content": " encès.\n\nalgo més?"}}]},
+                {"choices": [{"delta": {}, "finish_reason": "stop"}]},
+            ]
+        ]
+    )
+
+    result = await conversation.async_converse(
+        hass, "encén el llum de peu", None, Context(), "ca", agent_id="conversation.hermes_assistant"
+    )
+
+    assert result.response.speech["plain"]["speech"] == "fet. llum de peu encès.\n\nalgo més?"
