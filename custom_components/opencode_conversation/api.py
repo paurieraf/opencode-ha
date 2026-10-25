@@ -110,6 +110,7 @@ class OpenCodeClient:
         """Return the identity headers sent with every request."""
         return {
             "user-agent": f"oc-ha/{INTEGRATION_VERSION}",
+            **self.provider.extra_headers,
             **self._session_headers(self._session_id),
         }
 

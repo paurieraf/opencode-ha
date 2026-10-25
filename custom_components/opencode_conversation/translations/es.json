@@ -2,15 +2,17 @@
   "config": {
     "step": {
       "user": {
-        "title": "Conectar con OpenCode o DeepSeek",
-        "description": "Elige el proveedor e introduce su clave de API: una clave de OpenCode Go de OpenCode Console, o una clave de DeepSeek de platform.deepseek.com.",
+        "title": "Conecta con OpenCode, DeepSeek o Hermes",
+        "description": "Elige el proveedor e introduce su clave: una clave de OpenCode Go de la OpenCode Console, una clave de DeepSeek de platform.deepseek.com, o la API_SERVER_KEY de un perfil de Hermes Agent.",
         "data": {
           "provider": "Proveedor",
-          "api_key": "Clave de API"
+          "api_key": "Clave de API",
+          "base_url": "URL del servidor (solo Hermes)"
         },
         "data_description": {
           "provider": "OpenCode Go da acceso a muchos modelos con una sola suscripción. La API de DeepSeek sirve directamente los modelos de DeepSeek y cobra de un saldo prepago.",
-          "api_key": "Se guarda en la configuración de Home Assistant y solo se envía al proveedor elegido (opencode.ai o api.deepseek.com)."
+          "api_key": "Se guarda en la configuración de Home Assistant y solo se envía al proveedor elegido (opencode.ai o api.deepseek.com).",
+          "base_url": "URL base del API server de Hermes Agent, con el prefijo del perfil, por ejemplo http://10.1.1.114:8642/p/tono/v1. Déjala vacía para OpenCode Go y DeepSeek."
         }
       },
       "model": {
@@ -41,7 +43,8 @@
     "error": {
       "invalid_auth": "Clave de API no válida",
       "cannot_connect": "No se ha podido conectar con el proveedor",
-      "usage_limit": "Se ha alcanzado el límite de uso. Vuelve a intentarlo más tarde."
+      "usage_limit": "Se ha alcanzado el límite de uso. Vuelve a intentarlo más tarde.",
+      "base_url_required": "Introduce la URL del API server de Hermes Agent."
     },
     "abort": {
       "already_configured": "Esta clave de API ya está configurada",

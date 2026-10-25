@@ -2,15 +2,17 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connecta amb OpenCode o DeepSeek",
-        "description": "Tria el proveïdor i introdueix-ne la clau d'API: una clau d'OpenCode Go de l'OpenCode Console, o una clau de DeepSeek de platform.deepseek.com.",
+        "title": "Connecta amb OpenCode, DeepSeek o Hermes",
+        "description": "Tria el proveïdor i escriu-ne la clau: una clau d'OpenCode Go de l'OpenCode Console, una clau de DeepSeek de platform.deepseek.com, o la API_SERVER_KEY d'un perfil de Hermes Agent.",
         "data": {
           "provider": "Proveïdor",
-          "api_key": "Clau d'API"
+          "api_key": "Clau d'API",
+          "base_url": "URL del servidor (només Hermes)"
         },
         "data_description": {
           "provider": "OpenCode Go dona accés a molts models amb una sola subscripció. L'API de DeepSeek serveix directament els models de DeepSeek i cobra d'un saldo prepagat.",
-          "api_key": "Es desa a la configuració de Home Assistant i només s'envia al proveïdor triat (opencode.ai o api.deepseek.com)."
+          "api_key": "Es desa a la configuració de Home Assistant i només s'envia al proveïdor triat (opencode.ai o api.deepseek.com).",
+          "base_url": "URL base de l'API server de Hermes Agent, amb el prefix del perfil, per exemple http://10.1.1.114:8642/p/tono/v1. Deixa-la buida per a OpenCode Go i DeepSeek."
         }
       },
       "model": {
@@ -41,7 +43,8 @@
     "error": {
       "invalid_auth": "Clau d'API no vàlida",
       "cannot_connect": "No s'ha pogut connectar amb el proveïdor",
-      "usage_limit": "S'ha arribat al límit d'ús. Torna-ho a provar més tard."
+      "usage_limit": "S'ha arribat al límit d'ús. Torna-ho a provar més tard.",
+      "base_url_required": "Escriu l'URL de l'API server de Hermes Agent."
     },
     "abort": {
       "already_configured": "Aquesta clau d'API ja està configurada",

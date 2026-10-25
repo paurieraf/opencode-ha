@@ -9,7 +9,7 @@ Use models from your [OpenCode Go](https://opencode.ai/go) subscription, or Deep
 - **Conversation agent** — chat in the dashboard, in voice pipelines, or from automations. Turn on *Control Home Assistant* to let it act on intents (lights, covers, scripts, and more). Off by default.
 - **AI Task entity** — plain text or structured output (JSON schema) via `ai_task.generate_data`.
 - **Multiple agents and model discovery** — one agent per model under a single API key; the flows list your subscription's models, with a manual override for anything missing.
-- **Two providers** — OpenCode Go or the DeepSeek API, chosen when you add the integration. Add it twice to use both.
+- **Three providers** — OpenCode Go, the DeepSeek API, or a self-hosted [Hermes Agent](https://hermes-agent.nousresearch.com) profile through its API server, chosen when you add the integration. Add it more than once to use several.
 - **Every OpenCode Go API family** — Chat Completions, Anthropic Messages, and OpenAI Responses.
 - **Streaming responses** — voice replies start speaking before generation finishes.
 - **Localized** — English, Catalan and Spanish; conversation errors are spoken in the language of the conversation, not the system language.
@@ -39,15 +39,17 @@ Copy `custom_components/opencode_conversation/` into your Home Assistant `config
 
 ### Providers
 
-| | OpenCode Go | DeepSeek API |
-|---|---|---|
-| Endpoint | `https://opencode.ai/zen/go/v1` | `https://api.deepseek.com` |
-| Models | Every model in the Go plan, in all three API families | `deepseek-flash` (latest DeepSeek Flash) and `deepseek-v4-pro`, Chat Completions |
-| Billing | Subscription with usage windows | Prepaid balance; an empty balance is reported as its own error and not retried |
-| Key check | `GET /usage` | `GET /user/balance` |
-| Data handling | See the OpenCode Go privacy table | Prompts are kept while the account exists, stored in China, and may be used for training unless you opt out by email; the model list shows this note |
+| | OpenCode Go | DeepSeek API | Hermes Agent |
+|---|---|---|---|
+| Endpoint | `https://opencode.ai/zen/go/v1` | `https://api.deepseek.com` | Your API server, with the profile prefix, e.g. `http://10.1.1.114:8642/p/tono/v1` |
+| Models | Every model in the Go plan, in all three API families | `deepseek-flash` (latest DeepSeek Flash) and `deepseek-v4-pro`, Chat Completions | The profile served at `/models`, Chat Completions |
+| Billing | Subscription with usage windows | Prepaid balance; an empty balance is reported as its own error and not retried | Whatever the Hermes profile uses |
+| Key check | `GET /usage` | `GET /user/balance` | `GET /models` with the profile's `API_SERVER_KEY` |
+| Data handling | See the OpenCode Go privacy table | Prompts are kept while the account exists, stored in China, and may be used for training unless you opt out by email; the model list shows this note | Stays on your server, then goes to the profile's model provider |
 
 Entries created before providers existed keep using OpenCode Go. DeepSeek models think by default: set **Thinking** to **Disabled** for voice.
+
+**Hermes Agent.** Hermes runs its own agent, with its own personality, memory and tools, server side; Home Assistant only sends the conversation. *Control Home Assistant* is not offered: give the Hermes profile its own access to your home instead (for example through Home Assistant's MCP Server). Every request carries `X-Hermes-Session-Key: home-assistant`, so the profile keeps one long-term memory scope for Home Assistant. **Thinking** is sent as `model_options.reasoning` and new Hermes agents start with it **Disabled**, which matters for voice. Hermes tool progress frames in the stream are ignored. Only a conversation agent is created; an AI Task entity can be added by hand.
 
 ### Adding more agents
 
